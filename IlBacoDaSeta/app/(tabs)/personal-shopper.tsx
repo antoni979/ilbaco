@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useGenderTheme } from '@/features/theme/hooks';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { analyzeCustomer, CustomerAnalysis, COLOR_PALETTE, EVENT_TYPES } from '@/features/shopper/services/customer_analysis';
@@ -42,6 +42,7 @@ export default function PersonalShopperScreen() {
 
     // Items y resultados
     const [items, setItems] = useState<ClosetItem[]>([]);
+    const [itemsLoaded, setItemsLoaded] = useState(false);
     const [recommendedOutfits, setRecommendedOutfits] = useState<RecommendedOutfit[]>([]);
     const [sessionId, setSessionId] = useState<string>('');
 
@@ -50,25 +51,45 @@ export default function PersonalShopperScreen() {
     const [tryOnResult, setTryOnResult] = useState<string | null>(null);
     const [tryOnOutfitIndex, setTryOnOutfitIndex] = useState<number | null>(null);
 
-    // Cargar items al entrar
+    // Modal para cambiar prenda
+    const [editingOutfitIndex, setEditingOutfitIndex] = useState<number | null>(null);
+    const [editingCategory, setEditingCategory] = useState<'outerwear' | 'top' | 'bottom' | 'shoes' | null>(null);
+    const [editingTab, setEditingTab] = useState<'recommended' | 'alternatives' | 'notRecommended'>('recommended');
+
+    // Cargar items al montar (para web) y al recibir foco (para mobile)
+    React.useEffect(() => {
+        fetchItems();
+    }, []);
+
     useFocusEffect(
         useCallback(() => {
-            fetchItems();
-        }, [])
+            // Re-fetch al volver a la pantalla (mobile)
+            if (itemsLoaded) {
+                fetchItems();
+            }
+        }, [itemsLoaded])
     );
 
-    const fetchItems = async () => {
+    const fetchItems = async (): Promise<ClosetItem[]> => {
         try {
+            console.log('[PersonalShopper] Cargando items...');
             const { data, error } = await supabase
                 .from('items')
                 .select('*')
                 .order('created_at', { ascending: false });
 
             if (!error && data) {
+                console.log(`[PersonalShopper] ${data.length} items cargados`);
                 setItems(data);
+                setItemsLoaded(true);
+                return data;
+            } else {
+                console.error('[PersonalShopper] Error cargando items:', error);
+                return [];
             }
         } catch (e) {
-            console.error(e);
+            console.error('[PersonalShopper] Exception:', e);
+            return [];
         }
     };
 
@@ -116,8 +137,16 @@ export default function PersonalShopperScreen() {
         setStep('generating');
 
         try {
+            // Obtener items actualizados directamente si no están cargados
+            let currentItems = items;
+            if (!itemsLoaded || items.length === 0) {
+                console.log('[PersonalShopper] Items no cargados, obteniendo...');
+                currentItems = await fetchItems();
+            }
+
+            console.log(`[PersonalShopper] Generando recomendaciones con ${currentItems.length} items`);
             const outfits = recommendOutfits({
-                items,
+                items: currentItems,
                 customerAnalysis,
                 eventType: eventType as any,
                 topLength: topLength as any,
@@ -138,6 +167,7 @@ export default function PersonalShopperScreen() {
                 favorite_colors: favoriteColors,
                 avoid_colors: avoidColors,
                 recommended_outfits: outfits.map(o => ({
+                    outerwear_id: o.outerwear?.id,
                     top_id: o.top.id,
                     bottom_id: o.bottom.id,
                     shoes_id: o.shoes?.id,
@@ -193,6 +223,7 @@ export default function PersonalShopperScreen() {
             }
 
             // Convertir imagenes de prendas a base64
+            const outerwearBase64 = outfit.outerwear ? await urlToBase64(outfit.outerwear.image_url) : undefined;
             const topBase64 = await urlToBase64(outfit.top.image_url);
             const bottomBase64 = await urlToBase64(outfit.bottom.image_url);
             const shoesBase64 = outfit.shoes ? await urlToBase64(outfit.shoes.image_url) : undefined;
@@ -202,7 +233,8 @@ export default function PersonalShopperScreen() {
                 customerPhoto,
                 topBase64,
                 bottomBase64,
-                shoesBase64
+                shoesBase64,
+                outerwearBase64
             );
 
             if (result) {
@@ -222,6 +254,186 @@ export default function PersonalShopperScreen() {
     const closeTryOnModal = () => {
         setTryOnResult(null);
         setTryOnOutfitIndex(null);
+    };
+
+    // Categorías para filtrar items
+    const CATEGORY_FILTERS: Record<string, string[]> = {
+        outerwear: ['abrigo', 'chaqueta', 'cazadora', 'blazer', 'gabardina', 'parka', 'plumas', 'cardigan', 'bomber', 'trench'],
+        top: ['camiseta', 'camisa', 'polo', 'top', 'blusa', 'jersey', 'sudadera', 'chaleco', 'vestido'],
+        bottom: ['pantalon', 'pantalón', 'shorts', 'falda', 'jeans', 'vaquero', 'bermuda'],
+        shoes: ['calzado', 'zapato', 'zapatilla', 'bota', 'sandalia', 'deportiva'],
+    };
+
+    // Colores neutros que combinan con todo
+    const NEUTRAL_COLORS = ['negro', 'blanco', 'gris', 'beige', 'azul marino', 'marron', 'camel', 'crema'];
+
+    // Combinaciones clásicas de colores
+    const CLASSIC_COMBOS: [string, string][] = [
+        ['azul marino', 'blanco'], ['negro', 'blanco'], ['gris', 'azul'],
+        ['beige', 'azul marino'], ['blanco', 'azul'], ['negro', 'gris'],
+        ['marron', 'beige'], ['verde oliva', 'beige'], ['burdeos', 'gris'],
+        ['azul', 'blanco'], ['negro', 'rojo'], ['gris', 'rosa'],
+    ];
+
+    // Colores que chocan entre sí
+    const CLASHING_COLORS: [string, string][] = [
+        ['rojo', 'naranja'], ['rojo', 'rosa'], ['naranja', 'rosa'],
+        ['verde', 'rojo'], ['morado', 'naranja'], ['azul', 'naranja'],
+    ];
+
+    // Obtener color de un item
+    const getItemColor = (item: ClosetItem): string => {
+        return (item.characteristics?.color || '').toLowerCase().trim();
+    };
+
+    // Verificar si un color está en una lista
+    const colorInList = (itemColor: string, colorList: string[]): boolean => {
+        const normalized = itemColor.toLowerCase();
+        return colorList.some(c => normalized.includes(c.toLowerCase()) || c.toLowerCase().includes(normalized));
+    };
+
+    // Calcular score de compatibilidad para una prenda
+    const scoreItemCompatibility = (item: ClosetItem, outfit: RecommendedOutfit, category: string): number => {
+        let score = 50; // Base score
+        const itemColor = getItemColor(item);
+
+        // Obtener colores del resto del outfit
+        const otherColors: string[] = [];
+        if (category !== 'outerwear' && outfit.outerwear) otherColors.push(getItemColor(outfit.outerwear));
+        if (category !== 'top') otherColors.push(getItemColor(outfit.top));
+        if (category !== 'bottom') otherColors.push(getItemColor(outfit.bottom));
+        if (category !== 'shoes' && outfit.shoes) otherColors.push(getItemColor(outfit.shoes));
+
+        // 1. Bonus si el color favorece al cliente (análisis IA)
+        if (customerAnalysis?.colors_that_favor) {
+            if (colorInList(itemColor, customerAnalysis.colors_that_favor)) {
+                score += 25;
+            }
+        }
+
+        // 2. Penalizar si el color no favorece al cliente
+        if (customerAnalysis?.colors_to_avoid) {
+            if (colorInList(itemColor, customerAnalysis.colors_to_avoid)) {
+                score -= 30;
+            }
+        }
+
+        // 3. Bonus si está en colores favoritos del cliente
+        if (colorInList(itemColor, favoriteColors)) {
+            score += 20;
+        }
+
+        // 4. Penalizar si está en colores a evitar
+        if (colorInList(itemColor, avoidColors)) {
+            score -= 40;
+        }
+
+        // 5. Bonus por combinación clásica con el resto del outfit
+        for (const otherColor of otherColors) {
+            const isClassicCombo = CLASSIC_COMBOS.some(([c1, c2]) =>
+                (itemColor.includes(c1) && otherColor.includes(c2)) ||
+                (itemColor.includes(c2) && otherColor.includes(c1))
+            );
+            if (isClassicCombo) {
+                score += 15;
+            }
+        }
+
+        // 6. Bonus si es color neutro (combina con todo)
+        if (colorInList(itemColor, NEUTRAL_COLORS)) {
+            score += 10;
+        }
+
+        // 7. Penalizar colores que chocan
+        for (const otherColor of otherColors) {
+            const isClashing = CLASHING_COLORS.some(([c1, c2]) =>
+                (itemColor.includes(c1) && otherColor.includes(c2)) ||
+                (itemColor.includes(c2) && otherColor.includes(c1))
+            );
+            if (isClashing) {
+                score -= 25;
+            }
+        }
+
+        // 8. Penalizar si hay demasiados colores vibrantes
+        const vibrantColors = ['rojo', 'naranja', 'amarillo', 'rosa', 'morado', 'verde'];
+        const itemVibrant = vibrantColors.some(c => itemColor.includes(c));
+        const outfitVibrantCount = otherColors.filter(oc =>
+            vibrantColors.some(c => oc.includes(c))
+        ).length;
+        if (itemVibrant && outfitVibrantCount >= 2) {
+            score -= 20;
+        }
+
+        return score;
+    };
+
+    // Clasificar items por compatibilidad
+    const getItemsByCategoryClassified = (category: string) => {
+        if (editingOutfitIndex === null) return { recommended: [], alternatives: [], notRecommended: [] };
+
+        const outfit = recommendedOutfits[editingOutfitIndex];
+        const filters = CATEGORY_FILTERS[category] || [];
+
+        const categoryItems = items.filter(item => {
+            const cat = (item.category || item.characteristics?.category || '').toLowerCase();
+            return filters.some(f => cat.includes(f));
+        });
+
+        // Calcular score para cada item
+        const scoredItems = categoryItems.map(item => ({
+            item,
+            score: scoreItemCompatibility(item, outfit, category),
+        }));
+
+        // Ordenar por score
+        scoredItems.sort((a, b) => b.score - a.score);
+
+        // Clasificar en 3 grupos
+        const recommended: ClosetItem[] = [];
+        const alternatives: ClosetItem[] = [];
+        const notRecommended: ClosetItem[] = [];
+
+        for (const { item, score } of scoredItems) {
+            if (score >= 65) {
+                recommended.push(item);
+            } else if (score >= 40) {
+                alternatives.push(item);
+            } else {
+                notRecommended.push(item);
+            }
+        }
+
+        return { recommended, alternatives, notRecommended };
+    };
+
+    // Abrir modal para cambiar prenda
+    const openEditModal = (outfitIndex: number, category: 'outerwear' | 'top' | 'bottom' | 'shoes') => {
+        setEditingOutfitIndex(outfitIndex);
+        setEditingCategory(category);
+        setEditingTab('recommended'); // Siempre empezar en recomendados
+    };
+
+    // Cerrar modal de edición
+    const closeEditModal = () => {
+        setEditingOutfitIndex(null);
+        setEditingCategory(null);
+        setEditingTab('recommended');
+    };
+
+    // Cambiar prenda en un outfit
+    const changeItem = (newItem: ClosetItem | null) => {
+        if (editingOutfitIndex === null || editingCategory === null) return;
+
+        setRecommendedOutfits(prev => {
+            const updated = [...prev];
+            updated[editingOutfitIndex] = {
+                ...updated[editingOutfitIndex],
+                [editingCategory]: newItem,
+            };
+            return updated;
+        });
+        closeEditModal();
     };
 
     // Reiniciar flujo
@@ -695,27 +907,67 @@ export default function PersonalShopperScreen() {
                                                 </View>
                                             </View>
 
-                                            <View className="flex-row gap-3 mb-4">
-                                                <View className="flex-1">
-                                                    <Image source={{ uri: outfit.top.image_url }} className="w-full aspect-[3/4] rounded-xl" resizeMode="cover" />
-                                                    <Text className="text-xs text-gray-500 mt-1 text-center" numberOfLines={1}>
+                                            <View className="flex-row gap-2 mb-4">
+                                                {/* Abrigo */}
+                                                <TouchableOpacity className="flex-1" onPress={() => openEditModal(index, 'outerwear')}>
+                                                    <View className="relative">
+                                                        {outfit.outerwear ? (
+                                                            <Image source={{ uri: outfit.outerwear.image_url }} className="w-full aspect-[3/4] rounded-xl" resizeMode="cover" />
+                                                        ) : (
+                                                            <View className="w-full aspect-[3/4] rounded-xl bg-gray-100 items-center justify-center">
+                                                                <MaterialIcons name="ac-unit" size={24} color="#d1d5db" />
+                                                            </View>
+                                                        )}
+                                                        <View className="absolute top-1 right-1 w-6 h-6 rounded-full bg-white/90 items-center justify-center" style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 2 }}>
+                                                            <MaterialIcons name="edit" size={14} color={colors.primary} />
+                                                        </View>
+                                                    </View>
+                                                    <Text className="text-[10px] text-gray-500 mt-1 text-center" numberOfLines={1}>
+                                                        {outfit.outerwear?.name || 'Abrigo'}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                                {/* Parte Arriba */}
+                                                <TouchableOpacity className="flex-1" onPress={() => openEditModal(index, 'top')}>
+                                                    <View className="relative">
+                                                        <Image source={{ uri: outfit.top.image_url }} className="w-full aspect-[3/4] rounded-xl" resizeMode="cover" />
+                                                        <View className="absolute top-1 right-1 w-6 h-6 rounded-full bg-white/90 items-center justify-center" style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 2 }}>
+                                                            <MaterialIcons name="edit" size={14} color={colors.primary} />
+                                                        </View>
+                                                    </View>
+                                                    <Text className="text-[10px] text-gray-500 mt-1 text-center" numberOfLines={1}>
                                                         {outfit.top.name}
                                                     </Text>
-                                                </View>
-                                                <View className="flex-1">
-                                                    <Image source={{ uri: outfit.bottom.image_url }} className="w-full aspect-[3/4] rounded-xl" resizeMode="cover" />
-                                                    <Text className="text-xs text-gray-500 mt-1 text-center" numberOfLines={1}>
+                                                </TouchableOpacity>
+                                                {/* Parte Abajo */}
+                                                <TouchableOpacity className="flex-1" onPress={() => openEditModal(index, 'bottom')}>
+                                                    <View className="relative">
+                                                        <Image source={{ uri: outfit.bottom.image_url }} className="w-full aspect-[3/4] rounded-xl" resizeMode="cover" />
+                                                        <View className="absolute top-1 right-1 w-6 h-6 rounded-full bg-white/90 items-center justify-center" style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 2 }}>
+                                                            <MaterialIcons name="edit" size={14} color={colors.primary} />
+                                                        </View>
+                                                    </View>
+                                                    <Text className="text-[10px] text-gray-500 mt-1 text-center" numberOfLines={1}>
                                                         {outfit.bottom.name}
                                                     </Text>
-                                                </View>
-                                                {outfit.shoes && (
-                                                    <View className="flex-1">
-                                                        <Image source={{ uri: outfit.shoes.image_url }} className="w-full aspect-[3/4] rounded-xl" resizeMode="cover" />
-                                                        <Text className="text-xs text-gray-500 mt-1 text-center" numberOfLines={1}>
-                                                            {outfit.shoes.name}
-                                                        </Text>
+                                                </TouchableOpacity>
+                                                {/* Calzado */}
+                                                <TouchableOpacity className="flex-1" onPress={() => openEditModal(index, 'shoes')}>
+                                                    <View className="relative">
+                                                        {outfit.shoes ? (
+                                                            <Image source={{ uri: outfit.shoes.image_url }} className="w-full aspect-[3/4] rounded-xl" resizeMode="cover" />
+                                                        ) : (
+                                                            <View className="w-full aspect-[3/4] rounded-xl bg-gray-100 items-center justify-center">
+                                                                <MaterialCommunityIcons name="shoe-formal" size={24} color="#d1d5db" />
+                                                            </View>
+                                                        )}
+                                                        <View className="absolute top-1 right-1 w-6 h-6 rounded-full bg-white/90 items-center justify-center" style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 2 }}>
+                                                            <MaterialIcons name="edit" size={14} color={colors.primary} />
+                                                        </View>
                                                     </View>
-                                                )}
+                                                    <Text className="text-[10px] text-gray-500 mt-1 text-center" numberOfLines={1}>
+                                                        {outfit.shoes?.name || 'Calzado'}
+                                                    </Text>
+                                                </TouchableOpacity>
                                             </View>
 
                                             <TouchableOpacity
@@ -778,6 +1030,123 @@ export default function PersonalShopperScreen() {
             )}
 
             {renderStep()}
+
+            {/* Modal para cambiar prenda */}
+            <Modal visible={editingCategory !== null} animationType="slide" transparent>
+                <View className="flex-1 bg-black/50 justify-end">
+                    <View className="bg-white rounded-t-3xl max-h-[85%]">
+                        {/* Header */}
+                        <View className="flex-row justify-between items-center p-4 border-b border-gray-100">
+                            <Text className="text-lg font-bold">
+                                Cambiar {editingCategory === 'outerwear' ? 'Abrigo' : editingCategory === 'top' ? 'Parte Arriba' : editingCategory === 'bottom' ? 'Parte Abajo' : 'Calzado'}
+                            </Text>
+                            <TouchableOpacity onPress={closeEditModal} className="p-2">
+                                <MaterialIcons name="close" size={24} color="#666" />
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Tabs de clasificación */}
+                        <View className="flex-row p-3 gap-2 border-b border-gray-100">
+                            <TouchableOpacity
+                                onPress={() => setEditingTab('recommended')}
+                                className={`flex-1 flex-row items-center justify-center gap-1 py-2 px-3 rounded-xl ${editingTab === 'recommended' ? 'bg-green-100' : 'bg-gray-100'}`}
+                            >
+                                <MaterialIcons name="thumb-up" size={16} color={editingTab === 'recommended' ? '#22c55e' : '#9ca3af'} />
+                                <Text className={`text-xs font-semibold ${editingTab === 'recommended' ? 'text-green-700' : 'text-gray-500'}`}>
+                                    Combina
+                                </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={() => setEditingTab('alternatives')}
+                                className={`flex-1 flex-row items-center justify-center gap-1 py-2 px-3 rounded-xl ${editingTab === 'alternatives' ? 'bg-yellow-100' : 'bg-gray-100'}`}
+                            >
+                                <MaterialIcons name="swap-horiz" size={16} color={editingTab === 'alternatives' ? '#eab308' : '#9ca3af'} />
+                                <Text className={`text-xs font-semibold ${editingTab === 'alternatives' ? 'text-yellow-700' : 'text-gray-500'}`}>
+                                    Opcional
+                                </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={() => setEditingTab('notRecommended')}
+                                className={`flex-1 flex-row items-center justify-center gap-1 py-2 px-3 rounded-xl ${editingTab === 'notRecommended' ? 'bg-red-100' : 'bg-gray-100'}`}
+                            >
+                                <MaterialIcons name="thumb-down" size={16} color={editingTab === 'notRecommended' ? '#ef4444' : '#9ca3af'} />
+                                <Text className={`text-xs font-semibold ${editingTab === 'notRecommended' ? 'text-red-600' : 'text-gray-500'}`}>
+                                    No combina
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Opción para quitar prenda (solo outerwear y shoes) */}
+                        {(editingCategory === 'outerwear' || editingCategory === 'shoes') && (
+                            <TouchableOpacity
+                                onPress={() => changeItem(null)}
+                                className="flex-row items-center gap-3 px-4 py-3 border-b border-gray-100 bg-gray-50"
+                            >
+                                <View className="w-12 h-14 rounded-lg bg-gray-200 items-center justify-center">
+                                    <MaterialIcons name="remove-circle-outline" size={20} color="#9ca3af" />
+                                </View>
+                                <Text className="text-gray-600 font-medium">Sin {editingCategory === 'outerwear' ? 'abrigo' : 'calzado'}</Text>
+                            </TouchableOpacity>
+                        )}
+
+                        {/* Lista de items del tab seleccionado */}
+                        <ScrollView className="p-4" contentContainerStyle={{ paddingBottom: 40 }}>
+                            {editingCategory && (() => {
+                                const { recommended, alternatives, notRecommended } = getItemsByCategoryClassified(editingCategory);
+
+                                // Seleccionar items según el tab activo
+                                const currentItems = editingTab === 'recommended' ? recommended
+                                    : editingTab === 'alternatives' ? alternatives
+                                    : notRecommended;
+
+                                const emptyMessages = {
+                                    recommended: 'No hay prendas que combinen perfecto',
+                                    alternatives: 'No hay alternativas disponibles',
+                                    notRecommended: 'No hay prendas en esta categoría'
+                                };
+
+                                return currentItems.length > 0 ? (
+                                    <View className="flex-row flex-wrap gap-2">
+                                        {currentItems.map(item => {
+                                            const isSelected = editingOutfitIndex !== null &&
+                                                recommendedOutfits[editingOutfitIndex]?.[editingCategory]?.id === item.id;
+                                            return (
+                                                <TouchableOpacity
+                                                    key={item.id}
+                                                    onPress={() => changeItem(item)}
+                                                    className="rounded-xl overflow-hidden"
+                                                    style={{
+                                                        width: '31%',
+                                                        aspectRatio: 3 / 4,
+                                                        borderWidth: isSelected ? 3 : 1,
+                                                        borderColor: isSelected ? colors.primary : '#e5e7eb',
+                                                    }}
+                                                >
+                                                    <Image source={{ uri: item.image_url }} className="w-full h-full" resizeMode="cover" />
+                                                    {isSelected && (
+                                                        <View className="absolute top-1 right-1 w-5 h-5 rounded-full items-center justify-center" style={{ backgroundColor: colors.primary }}>
+                                                            <MaterialIcons name="check" size={14} color="#fff" />
+                                                        </View>
+                                                    )}
+                                                </TouchableOpacity>
+                                            );
+                                        })}
+                                    </View>
+                                ) : (
+                                    <View className="py-10 items-center">
+                                        <MaterialIcons
+                                            name={editingTab === 'recommended' ? 'inventory-2' : editingTab === 'alternatives' ? 'swap-horiz' : 'block'}
+                                            size={40}
+                                            color="#d1d5db"
+                                        />
+                                        <Text className="text-gray-400 mt-2 text-center">{emptyMessages[editingTab]}</Text>
+                                    </View>
+                                );
+                            })()}
+                        </ScrollView>
+                    </View>
+                </View>
+            </Modal>
 
             {/* Modal resultado try-on */}
             <Modal visible={!!tryOnResult} animationType="slide" transparent>

@@ -20,6 +20,7 @@ type ClosetItem = {
 };
 
 export type RecommendedOutfit = {
+    outerwear?: ClosetItem;
     top: ClosetItem;
     bottom: ClosetItem;
     shoes?: ClosetItem;
@@ -45,8 +46,9 @@ const STYLE_BY_EVENT: Record<string, string[]> = {
     casual: ['Casual', 'Streetwear', 'Deportivo', 'Vintage'],
 };
 
-// Categorias de parte superior
-const TOP_CATEGORIES = ['camiseta', 'camisa', 'polo', 'top', 'blusa', 'jersey', 'sudadera', 'chaqueta', 'chaleco', 'vestido'];
+// Categorias de prendas
+const OUTERWEAR_CATEGORIES = ['abrigo', 'chaqueta', 'cazadora', 'blazer', 'gabardina', 'parka', 'plumas', 'cardigan', 'bomber', 'trench'];
+const TOP_CATEGORIES = ['camiseta', 'camisa', 'polo', 'top', 'blusa', 'jersey', 'sudadera', 'chaleco', 'vestido'];
 const BOTTOM_CATEGORIES = ['pantalon', 'pantalón', 'shorts', 'falda', 'jeans', 'vaquero', 'bermuda'];
 const SHOES_CATEGORIES = ['calzado', 'zapato', 'zapatilla', 'bota', 'sandalia', 'deportiva'];
 
@@ -74,8 +76,15 @@ function normalizeColor(color: string): string {
     return (color || '').toLowerCase().trim();
 }
 
+function isOuterwearCategory(category: string): boolean {
+    const cat = category.toLowerCase();
+    return OUTERWEAR_CATEGORIES.some(c => cat.includes(c));
+}
+
 function isTopCategory(category: string): boolean {
     const cat = category.toLowerCase();
+    // Excluir outerwear de tops para evitar duplicados
+    if (isOuterwearCategory(cat)) return false;
     return TOP_CATEGORIES.some(c => cat.includes(c));
 }
 
@@ -284,6 +293,11 @@ export function recommendOutfits(params: RecommendationParams): RecommendedOutfi
     const { items } = params;
 
     // Separar items por categoria
+    const outerwear = items.filter(item => {
+        const cat = item.category || item.characteristics?.category || '';
+        return isOuterwearCategory(cat);
+    });
+
     const tops = items.filter(item => {
         const cat = item.category || item.characteristics?.category || '';
         if (!isTopCategory(cat)) return false;
@@ -301,7 +315,7 @@ export function recommendOutfits(params: RecommendationParams): RecommendedOutfi
         return isShoesCategory(cat);
     });
 
-    console.log(`[Recommender] Found ${tops.length} tops, ${bottoms.length} bottoms, ${shoes.length} shoes`);
+    console.log(`[Recommender] Found ${outerwear.length} outerwear, ${tops.length} tops, ${bottoms.length} bottoms, ${shoes.length} shoes`);
 
     // Si no hay suficientes items, relajar filtros
     let finalTops = tops;
@@ -330,12 +344,15 @@ export function recommendOutfits(params: RecommendationParams): RecommendedOutfi
         for (const bottom of finalBottoms) {
             // Obtener un zapato random o undefined
             const shoe = shoes.length > 0 ? shoes[Math.floor(Math.random() * shoes.length)] : undefined;
+            // Obtener un abrigo random o undefined
+            const jacket = outerwear.length > 0 ? outerwear[Math.floor(Math.random() * outerwear.length)] : undefined;
 
             const { score, reasoning } = scoreOutfit(top, bottom, shoe, params);
 
             // Solo incluir si pasa el minimo
             if (score > 0) {
                 allOutfits.push({
+                    outerwear: jacket,
                     top,
                     bottom,
                     shoes: shoe,

@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useGenderTheme } from '@/features/theme/hooks';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as FileSystem from 'expo-file-system';
@@ -19,13 +19,37 @@ type ClosetItem = {
     characteristics?: any;
 };
 
-type Category = 'top' | 'bottom' | 'shoes';
+type Category = 'outerwear' | 'top' | 'bottom' | 'shoes';
 
-const CATEGORY_CONFIG: { key: Category; label: string; icon: string; filter: string[]; subcategories: string[] }[] = [
-    { key: 'top', label: 'Parte Arriba', icon: 'checkroom', filter: ['camiseta', 'camisa', 'polo', 'top', 'blusa', 'jersey', 'sudadera', 'chaqueta', 'abrigo', 'chaleco', 'vestido', 'mono'], subcategories: ['Todo', 'Camiseta', 'Camisa', 'Polo', 'Blusa', 'Jersey', 'Sudadera', 'Chaqueta', 'Abrigo', 'Chaleco', 'Vestido'] },
-    { key: 'bottom', label: 'Parte Abajo', icon: 'straighten', filter: ['pantalon', 'pantalón', 'shorts', 'falda', 'jeans', 'vaquero', 'bermuda', 'bañador'], subcategories: ['Todo', 'Pantalon', 'Shorts', 'Falda', 'Jeans', 'Bermuda'] },
-    { key: 'shoes', label: 'Calzado', icon: 'do-not-step', filter: ['calzado', 'zapato', 'zapatilla', 'bota', 'sandalia', 'deportiva', 'tacon', 'mocasin'], subcategories: ['Todo', 'Zapatilla', 'Zapato', 'Bota', 'Sandalia', 'Deportiva'] },
+const CATEGORY_CONFIG: { key: Category; label: string; icon: string; iconLib: 'material' | 'community' | 'emoji'; filter: string[]; subcategories: string[] }[] = [
+    { key: 'outerwear', label: 'Abrigo', icon: 'ac-unit', iconLib: 'material', filter: ['abrigo', 'chaqueta', 'cazadora', 'blazer', 'gabardina', 'parka', 'plumas', 'cardigan', 'bomber', 'trench'], subcategories: ['Todo', 'Chaqueta', 'Abrigo', 'Blazer', 'Cazadora', 'Cardigan', 'Bomber'] },
+    { key: 'top', label: 'Parte Arriba', icon: 'tshirt-crew-outline', iconLib: 'community', filter: ['camiseta', 'camisa', 'polo', 'top', 'blusa', 'jersey', 'sudadera', 'chaleco', 'vestido', 'mono'], subcategories: ['Todo', 'Camiseta', 'Camisa', 'Polo', 'Blusa', 'Jersey', 'Sudadera', 'Chaleco', 'Vestido'] },
+    { key: 'bottom', label: 'Parte Abajo', icon: 'pants', iconLib: 'emoji', filter: ['pantalon', 'pantalón', 'shorts', 'falda', 'jeans', 'vaquero', 'bermuda', 'bañador'], subcategories: ['Todo', 'Pantalon', 'Shorts', 'Falda', 'Jeans', 'Bermuda'] },
+    { key: 'shoes', label: 'Calzado', icon: 'shoe-formal', iconLib: 'community', filter: ['calzado', 'zapato', 'zapatilla', 'bota', 'sandalia', 'deportiva', 'tacon', 'mocasin'], subcategories: ['Todo', 'Zapatilla', 'Zapato', 'Bota', 'Sandalia', 'Deportiva'] },
 ];
+
+// Helper para renderizar icono según librería
+const CategoryIcon = ({ name, lib, size, color }: { name: string; lib: 'material' | 'community' | 'emoji'; size: number; color: string }) => {
+    if (lib === 'emoji') {
+        // Determinar opacidad según si está activo (color blanco) o no
+        const isActive = color === '#fff' || color === 'white';
+        const isGray = color === '#9ca3af' || color === '#d1d5db';
+        return (
+            <Text style={{
+                fontSize: size - 4,
+                opacity: isGray ? 0.4 : isActive ? 1 : 0.7,
+                // Aplicar filtro de escala de grises en web
+                ...(Platform.OS === 'web' && isGray ? { filter: 'grayscale(100%)' } as any : {})
+            }}>
+                {name === 'pants' ? '👖' : '👕'}
+            </Text>
+        );
+    }
+    if (lib === 'community') {
+        return <MaterialCommunityIcons name={name as any} size={size} color={color} />;
+    }
+    return <MaterialIcons name={name as any} size={size} color={color} />;
+};
 
 export default function ProbadorScreen() {
     const { classes, colors, isFemale } = useGenderTheme();
@@ -43,9 +67,10 @@ export default function ProbadorScreen() {
     // Estados
     const [customerPhoto, setCustomerPhoto] = useState<string | null>(null);
     const [paramsLoaded, setParamsLoaded] = useState(false);
-    const [activeCategory, setActiveCategory] = useState<Category>('top');
+    const [activeCategory, setActiveCategory] = useState<Category>('outerwear');
     const [subCategoryFilter, setSubCategoryFilter] = useState<string>('Todo');
-    const [selectedItems, setSelectedItems] = useState<{ top: ClosetItem | null; bottom: ClosetItem | null; shoes: ClosetItem | null }>({
+    const [selectedItems, setSelectedItems] = useState<{ outerwear: ClosetItem | null; top: ClosetItem | null; bottom: ClosetItem | null; shoes: ClosetItem | null }>({
+        outerwear: null,
         top: null,
         bottom: null,
         shoes: null,
@@ -56,11 +81,18 @@ export default function ProbadorScreen() {
     const [resultImage, setResultImage] = useState<string | null>(null);
     const [showResult, setShowResult] = useState(false);
 
-    // Cargar items al entrar
+    // Cargar items al montar (para web) y al recibir foco (para mobile)
+    React.useEffect(() => {
+        fetchItems();
+    }, []);
+
     useFocusEffect(
         useCallback(() => {
-            fetchItems();
-        }, [])
+            // Re-fetch al volver a la pantalla (mobile)
+            if (!loading) {
+                fetchItems();
+            }
+        }, [loading])
     );
 
     // Cargar preselecciones del Personal Shopper
@@ -208,6 +240,7 @@ export default function ProbadorScreen() {
 
         try {
             // Convertir imagenes de items a base64
+            const outerwearBase64 = selectedItems.outerwear ? await urlToBase64(selectedItems.outerwear.image_url) : undefined;
             const topBase64 = selectedItems.top ? await urlToBase64(selectedItems.top.image_url) : '';
             const bottomBase64 = selectedItems.bottom ? await urlToBase64(selectedItems.bottom.image_url) : '';
             const shoesBase64 = selectedItems.shoes ? await urlToBase64(selectedItems.shoes.image_url) : undefined;
@@ -226,7 +259,8 @@ export default function ProbadorScreen() {
                 customerPhoto,
                 finalTop,
                 finalBottom,
-                shoesBase64
+                shoesBase64,
+                outerwearBase64
             );
 
             if (result) {
@@ -250,6 +284,7 @@ export default function ProbadorScreen() {
     const saveToHistory = async (resultUrl: string) => {
         try {
             const itemsJson = {
+                outerwear: selectedItems.outerwear ? { id: selectedItems.outerwear.id, name: selectedItems.outerwear.name, image: selectedItems.outerwear.image_url } : null,
                 top: selectedItems.top ? { id: selectedItems.top.id, name: selectedItems.top.name, image: selectedItems.top.image_url } : null,
                 bottom: selectedItems.bottom ? { id: selectedItems.bottom.id, name: selectedItems.bottom.name, image: selectedItems.bottom.image_url } : null,
                 shoes: selectedItems.shoes ? { id: selectedItems.shoes.id, name: selectedItems.shoes.name, image: selectedItems.shoes.image_url } : null,
@@ -257,6 +292,7 @@ export default function ProbadorScreen() {
 
             await supabase.from('try_on_history').insert({
                 customer_photo_url: customerPhoto,
+                outerwear_item_id: selectedItems.outerwear?.id || null,
                 top_item_id: selectedItems.top?.id || null,
                 bottom_item_id: selectedItems.bottom?.id || null,
                 shoes_item_id: selectedItems.shoes?.id || null,
@@ -303,7 +339,7 @@ export default function ProbadorScreen() {
     // Limpiar todo para nuevo cliente
     const handleNewCustomer = () => {
         setCustomerPhoto(null);
-        setSelectedItems({ top: null, bottom: null, shoes: null });
+        setSelectedItems({ outerwear: null, top: null, bottom: null, shoes: null });
         setResultImage(null);
         setShowResult(false);
     };
@@ -392,8 +428,9 @@ export default function ProbadorScreen() {
                                     className={`flex-1 py-3 rounded-xl items-center ${isActive ? '' : 'bg-gray-100'}`}
                                     style={isActive ? { backgroundColor: colors.primary } : {}}
                                 >
-                                    <MaterialIcons
-                                        name={cat.icon as any}
+                                    <CategoryIcon
+                                        name={cat.icon}
+                                        lib={cat.iconLib}
                                         size={24}
                                         color={isActive ? '#fff' : hasSelection ? colors.primary : '#9ca3af'}
                                     />
@@ -473,8 +510,8 @@ export default function ProbadorScreen() {
                         <Text className={`text-xs font-bold uppercase tracking-wider opacity-50 mb-3 ${classes.text}`}>
                             Outfit Seleccionado
                         </Text>
-                        <View className="flex-row gap-3">
-                            {(['top', 'bottom', 'shoes'] as Category[]).map(cat => {
+                        <View className="flex-row gap-2">
+                            {(['outerwear', 'top', 'bottom', 'shoes'] as Category[]).map(cat => {
                                 const item = selectedItems[cat];
                                 const config = CATEGORY_CONFIG.find(c => c.key === cat);
 
@@ -486,14 +523,14 @@ export default function ProbadorScreen() {
                                         >
                                             {item ? (
                                                 <Image source={{ uri: item.image_url }} className="w-full h-full" resizeMode="cover" />
-                                            ) : (
-                                                <MaterialIcons name={config?.icon as any} size={24} color="#d1d5db" />
-                                            )}
+                                            ) : config ? (
+                                                <CategoryIcon name={config.icon} lib={config.iconLib} size={20} color="#d1d5db" />
+                                            ) : null}
                                         </View>
-                                        <Text className="text-xs text-gray-400 mt-1">{config?.label}</Text>
+                                        <Text className="text-[10px] text-gray-400 mt-1">{config?.label}</Text>
                                         {item && (
                                             <TouchableOpacity onPress={() => setSelectedItems(prev => ({ ...prev, [cat]: null }))}>
-                                                <Text className="text-xs" style={{ color: colors.primary }}>Quitar</Text>
+                                                <Text className="text-[10px]" style={{ color: colors.primary }}>Quitar</Text>
                                             </TouchableOpacity>
                                         )}
                                     </View>
