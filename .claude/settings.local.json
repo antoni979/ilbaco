@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "WebSearch",
+      "WebFetch(domain:replicate.com)",
+      "Bash(npm run dev:*)",
+      "Bash(npx expo start:*)"
+    ]
+  }
+}
