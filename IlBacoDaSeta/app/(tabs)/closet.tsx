@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, Platform, RefreshControl, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, Platform, RefreshControl, useWindowDimensions, Alert, Pressable, Modal } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 // Remove AddItemModal import
@@ -32,6 +33,9 @@ export default function ClosetScreen() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [gender, setGender] = useState<Gender>(null);
+    const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<ClosetItem | null>(null);
+    const [deleting, setDeleting] = useState(false);
 
     // Categorías dinámicas según género Y temporada
     const getCategoryFilters = (): string[] => {
@@ -124,6 +128,41 @@ export default function ClosetScreen() {
     const onRefresh = () => {
         setRefreshing(true);
         fetchItems();
+    };
+
+    const openDeleteModal = (item: ClosetItem) => {
+        setItemToDelete(item);
+        setDeleteModalVisible(true);
+    };
+
+    const closeDeleteModal = () => {
+        setDeleteModalVisible(false);
+        setItemToDelete(null);
+    };
+
+    const confirmDelete = async () => {
+        if (!itemToDelete || deleting) return;
+
+        setDeleting(true);
+        try {
+            const { error } = await supabase
+                .from('items')
+                .delete()
+                .eq('id', itemToDelete.id);
+
+            if (error) throw error;
+
+            // Primero cerrar el modal y resetear estados
+            setDeleteModalVisible(false);
+            setDeleting(false);
+            setItemToDelete(null);
+
+            // Luego refrescar la lista
+            await fetchItems();
+        } catch (error: any) {
+            console.error('Error deleting item:', error);
+            setDeleting(false);
+        }
     };
 
     // Filter items locally by both category and season
@@ -230,6 +269,7 @@ export default function ClosetScreen() {
                                 item={item}
                                 isWeb={isWeb}
                                 screenWidth={width}
+                                onDeletePress={() => openDeleteModal(item)}
                             />
                         ))
                     )}
@@ -258,11 +298,89 @@ export default function ClosetScreen() {
                     <Text className="text-white font-bold tracking-wide">Añadir</Text>
                 </TouchableOpacity>
             </View>
+
+            {/* Modal de confirmación de eliminación */}
+            <Modal
+                animationType="fade"
+                transparent={true}
+                visible={deleteModalVisible}
+                onRequestClose={closeDeleteModal}
+            >
+                <View className="flex-1 justify-center items-center" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                    <View
+                        className="bg-white dark:bg-gray-900 rounded-3xl mx-6 overflow-hidden"
+                        style={{
+                            width: isWeb ? 400 : '85%',
+                            maxWidth: 400,
+                            ...(isWeb ? { boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' } as any : {})
+                        }}
+                    >
+                        {/* Header con icono */}
+                        <View className="items-center pt-8 pb-4">
+                            <View
+                                className="w-16 h-16 rounded-full items-center justify-center mb-4"
+                                style={{ backgroundColor: `${colors.primary}15` }}
+                            >
+                                <Ionicons name="trash-outline" size={32} color={colors.primary} />
+                            </View>
+                            <Text
+                                className="text-xl text-charcoal dark:text-white text-center"
+                                style={{ fontFamily: 'PlayfairDisplay_600SemiBold' }}
+                            >
+                                Eliminar Prenda
+                            </Text>
+                        </View>
+
+                        {/* Contenido */}
+                        <View className="px-6 pb-6">
+                            <Text
+                                className="text-center text-gray-600 dark:text-gray-400 text-base leading-relaxed"
+                                style={{ fontFamily: 'Manrope_400Regular' }}
+                            >
+                                ¿Estás seguro de que quieres eliminar{' '}
+                                <Text className="font-bold text-charcoal dark:text-white">
+                                    "{itemToDelete?.name}"
+                                </Text>
+                                ? Esta acción no se puede deshacer.
+                            </Text>
+                        </View>
+
+                        {/* Botones */}
+                        <View className="flex-row border-t border-gray-200 dark:border-white/10">
+                            <TouchableOpacity
+                                onPress={closeDeleteModal}
+                                className="flex-1 py-4 items-center justify-center border-r border-gray-200 dark:border-white/10"
+                                disabled={deleting}
+                            >
+                                <Text
+                                    className="text-base text-gray-600 dark:text-gray-400"
+                                    style={{ fontFamily: 'Manrope_600SemiBold' }}
+                                >
+                                    Cancelar
+                                </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={confirmDelete}
+                                className="flex-1 py-4 items-center justify-center"
+                                style={{ backgroundColor: colors.primary }}
+                                disabled={deleting}
+                            >
+                                <Text
+                                    className="text-base text-white"
+                                    style={{ fontFamily: 'Manrope_600SemiBold' }}
+                                >
+                                    {deleting ? 'Eliminando...' : 'Eliminar'}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 }
 
-const ClosetItemCard = ({ item, isWeb = false, screenWidth = 400 }: { item: ClosetItem, isWeb?: boolean, screenWidth?: number }) => {
+const ClosetItemCard = ({ item, isWeb = false, screenWidth = 400, onDeletePress }: { item: ClosetItem, isWeb?: boolean, screenWidth?: number, onDeletePress?: () => void }) => {
     const router = useRouter();
     const { classes } = useGenderTheme();
     const chars = item.characteristics || {};
@@ -288,36 +406,41 @@ const ClosetItemCard = ({ item, isWeb = false, screenWidth = 400 }: { item: Clos
     };
 
     return (
-        <TouchableOpacity
-            onPress={handlePress}
-            activeOpacity={0.8}
+        <View
             style={{
                 width: itemWidth as any,
                 marginBottom: 16,
                 ...(isWeb ? { cursor: 'pointer' } as any : {}),
             }}
         >
-            <View className="aspect-[3/4] w-full rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 mb-2 border border-gray-100 dark:border-white/5 relative">
-                <Image source={{ uri: item.image_url }} className="w-full h-full" resizeMode="cover" />
-                <View className="absolute top-2 right-2 p-1.5 rounded-full bg-white/80 backdrop-blur-sm">
-                    <Text className="text-xs text-black">♥</Text>
+            <Pressable onPress={handlePress}>
+                <View className="aspect-[3/4] w-full rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 mb-2 border border-gray-100 dark:border-white/5 relative">
+                    <Image source={{ uri: item.image_url }} className="w-full h-full" resizeMode="cover" />
+                    {chars.color && (
+                        <View className="absolute bottom-2 left-2 flex-row gap-1">
+                            <View className="h-4 w-4 rounded-full border border-white shadow-sm" style={{ backgroundColor: getColorHex(chars.color) }} />
+                        </View>
+                    )}
                 </View>
-                {chars.color && (
-                    <View className="absolute bottom-2 left-2 flex-row gap-1">
-                        <View className="h-4 w-4 rounded-full border border-white shadow-sm" style={{ backgroundColor: getColorHex(chars.color) }} />
-                    </View>
-                )}
-            </View>
-            <View className="px-1">
-                {chars.pattern && chars.pattern !== 'Solid' && (
-                    <Text className="text-[10px] font-bold uppercase tracking-wider text-primary mb-0.5">{chars.pattern}</Text>
-                )}
-                <Text className={`text-xs font-bold leading-tight mt-0.5 ${classes.text}`} numberOfLines={2}>
-                    {item.name}
-                </Text>
-                <Text className="text-[10px] text-gray-500 mt-1 capitalize">{chars.season === 'All Season' ? 'Todo el año' : chars.season}</Text>
-            </View>
-        </TouchableOpacity>
+                <View className="px-1">
+                    {chars.pattern && chars.pattern !== 'Solid' && (
+                        <Text className="text-[10px] font-bold uppercase tracking-wider text-primary mb-0.5">{chars.pattern}</Text>
+                    )}
+                    <Text className={`text-xs font-bold leading-tight mt-0.5 ${classes.text}`} numberOfLines={2}>
+                        {item.name}
+                    </Text>
+                    <Text className="text-[10px] text-gray-500 mt-1 capitalize">{chars.season === 'All Season' ? 'Todo el año' : chars.season}</Text>
+                </View>
+            </Pressable>
+            {/* Botón eliminar fuera del Pressable principal */}
+            <Pressable
+                onPress={onDeletePress}
+                className="absolute top-2 right-2 p-2 rounded-full bg-red-500/90"
+                style={{ zIndex: 20 }}
+            >
+                <Ionicons name="trash-outline" size={14} color="white" />
+            </Pressable>
+        </View>
     );
 };
 
