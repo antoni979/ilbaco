@@ -1,6 +1,6 @@
-# 🤖 Servicios de IA en Stilaro
+# 🤖 Servicios de IA en Il Baco Da Seta
 
-Este documento describe los servicios de IA utilizados en la aplicación Stilaro.
+Este documento describe los servicios de IA utilizados en la aplicación Il Baco Da Seta.
 
 ---
 
@@ -158,4 +158,4 @@ npm start
 ---
 
 **Última actualización**: Diciembre 2024
-**Autor**: Stilaro Team
+**Autor**: Il Baco Da Seta Team

@@ -806,7 +806,7 @@ export default function AssistantScreen() {
             <View className={`px-6 py-4 flex-row justify-between items-center z-10 ${isFemale ? 'bg-white' : 'bg-transparent'}`}>
 
                 <Text className={`text-xl font-bold tracking-[0.15em] font-display uppercase ${classes.text}`}>
-                    Stilaro
+                    Il Baco Da Seta
                 </Text>
 
             </View>

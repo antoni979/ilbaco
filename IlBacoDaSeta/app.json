@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "StilaroApp",
-    "slug": "StilaroApp",
+    "name": "Il Baco Da Seta",
+    "slug": "ilbacodaseta",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/logo.jpg",
-    "scheme": "stilaroapp",
+    "scheme": "ilbacodaseta",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "runtimeVersion": {
@@ -18,7 +18,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.stilaro.app",
+      "bundleIdentifier": "com.ilbacodaseta.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -28,7 +28,7 @@
         "foregroundImage": "./assets/images/logo.jpg",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.stilaro.app",
+      "package": "com.ilbacodaseta.app",
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },

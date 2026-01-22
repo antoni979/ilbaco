@@ -151,7 +151,7 @@ export default function ClosetScreen() {
             {/* Header */}
             <View className={`px-6 py-4 border-b border-gray-200 dark:border-white/5 flex-row justify-between items-center sticky top-0 z-10 ${isFemale ? 'bg-white' : 'bg-transparent backdrop-blur-md'}`}>
                 <Text className={`text-2xl font-extrabold tracking-tight font-display ${classes.text}`}>
-                    STILARO
+                    IL BACO DA SETA
                 </Text>
 
             </View>
