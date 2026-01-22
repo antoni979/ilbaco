@@ -5,7 +5,14 @@
       "WebSearch",
       "WebFetch(domain:replicate.com)",
       "Bash(npm run dev:*)",
-      "Bash(npx expo start:*)"
+      "Bash(npx expo start:*)",
+      "Bash(ls:*)",
+      "mcp__supabase__apply_migration",
+      "mcp__supabase__list_tables"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "supabase"
+  ]
 }

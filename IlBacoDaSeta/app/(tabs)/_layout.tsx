@@ -80,22 +80,29 @@ export default function TabLayout() {
       <Tabs.Screen
         name="closet"
         options={{
-          title: 'Armario',
+          title: 'Prendas',
           tabBarIcon: ({ color }) => <MaterialIcons name="checkroom" size={26} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="assistant"
+        name="probador"
         options={{
-          title: 'Outfits',
-          tabBarIcon: ({ color }) => <MaterialIcons name="style" size={26} color={color} />,
+          title: 'Probador',
+          tabBarIcon: ({ color }) => <MaterialIcons name="camera-alt" size={26} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="profile"
+        name="personal-shopper"
         options={{
-          title: 'Perfil',
-          tabBarIcon: ({ color }) => <MaterialIcons name="person" size={26} color={color} />,
+          title: 'Shopper',
+          tabBarIcon: ({ color }) => <MaterialIcons name="auto-awesome" size={26} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="admin"
+        options={{
+          title: 'Admin',
+          tabBarIcon: ({ color }) => <MaterialIcons name="settings" size={26} color={color} />,
         }}
       />
     </Tabs>
