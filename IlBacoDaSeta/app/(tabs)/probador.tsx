@@ -2,13 +2,12 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, Platform, ActivityIndicator, Modal, useWindowDimensions, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useGenderTheme } from '@/features/theme/hooks';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
 import { generateVirtualTryOn } from '@/features/assistant/services/virtual_try_on';
 
 type ClosetItem = {
@@ -33,8 +32,17 @@ export default function ProbadorScreen() {
     const { width } = useWindowDimensions();
     const isWeb = Platform.OS === 'web';
 
+    // Parametros del Personal Shopper
+    const params = useLocalSearchParams<{
+        preselectedTop?: string;
+        preselectedBottom?: string;
+        preselectedShoes?: string;
+        customerPhoto?: string;
+    }>();
+
     // Estados
     const [customerPhoto, setCustomerPhoto] = useState<string | null>(null);
+    const [paramsLoaded, setParamsLoaded] = useState(false);
     const [activeCategory, setActiveCategory] = useState<Category>('top');
     const [subCategoryFilter, setSubCategoryFilter] = useState<string>('Todo');
     const [selectedItems, setSelectedItems] = useState<{ top: ClosetItem | null; bottom: ClosetItem | null; shoes: ClosetItem | null }>({
@@ -54,6 +62,38 @@ export default function ProbadorScreen() {
             fetchItems();
         }, [])
     );
+
+    // Cargar preselecciones del Personal Shopper
+    React.useEffect(() => {
+        if (!loading && items.length > 0 && !paramsLoaded) {
+            // Cargar foto del cliente si viene de Personal Shopper
+            if (params.customerPhoto) {
+                setCustomerPhoto(params.customerPhoto);
+            }
+
+            // Cargar items preseleccionados
+            if (params.preselectedTop) {
+                const topItem = items.find(i => i.id === parseInt(params.preselectedTop!));
+                if (topItem) {
+                    setSelectedItems(prev => ({ ...prev, top: topItem }));
+                }
+            }
+            if (params.preselectedBottom) {
+                const bottomItem = items.find(i => i.id === parseInt(params.preselectedBottom!));
+                if (bottomItem) {
+                    setSelectedItems(prev => ({ ...prev, bottom: bottomItem }));
+                }
+            }
+            if (params.preselectedShoes) {
+                const shoesItem = items.find(i => i.id === parseInt(params.preselectedShoes!));
+                if (shoesItem) {
+                    setSelectedItems(prev => ({ ...prev, shoes: shoesItem }));
+                }
+            }
+
+            setParamsLoaded(true);
+        }
+    }, [loading, items, params, paramsLoaded]);
 
     const fetchItems = async () => {
         try {
@@ -244,14 +284,15 @@ export default function ProbadorScreen() {
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
+                Alert.alert('Descargado', 'La imagen se ha descargado');
             } else {
-                // Mobile: guardar y compartir
+                // Mobile: guardar en cache y mostrar mensaje
                 const filename = `${FileSystem.cacheDirectory}probador_${Date.now()}.jpg`;
                 const base64Data = resultImage.replace(/^data:image\/\w+;base64,/, '');
                 await FileSystem.writeAsStringAsync(filename, base64Data, {
                     encoding: FileSystem.EncodingType.Base64,
                 });
-                await Sharing.shareAsync(filename);
+                Alert.alert('Guardado', 'Imagen guardada en cache. Puedes hacer captura de pantalla para guardarla.');
             }
         } catch (error) {
             console.error('Error downloading:', error);
