@@ -239,22 +239,68 @@ export default function ProbadorScreen() {
         setGenerating(true);
 
         try {
-            // Convertir imagenes de items a base64
-            const outerwearBase64 = selectedItems.outerwear ? await urlToBase64(selectedItems.outerwear.image_url) : undefined;
-            const topBase64 = selectedItems.top ? await urlToBase64(selectedItems.top.image_url) : '';
-            const bottomBase64 = selectedItems.bottom ? await urlToBase64(selectedItems.bottom.image_url) : '';
-            const shoesBase64 = selectedItems.shoes ? await urlToBase64(selectedItems.shoes.image_url) : undefined;
+            console.log('[Probador] Iniciando generación...');
+            console.log('[Probador] Foto cliente:', customerPhoto ? '✓' : '❌');
+            console.log('[Probador] Top:', selectedItems.top?.name || '(no seleccionado)');
+            console.log('[Probador] Bottom:', selectedItems.bottom?.name || '(no seleccionado)');
 
-            // Necesitamos al menos top y bottom para el servicio
-            if (!topBase64 && !bottomBase64) {
-                Alert.alert('Error', 'Necesitas seleccionar al menos parte de arriba y parte de abajo');
-                return;
+            // Convertir imagenes de items a base64
+            let outerwearBase64: string | undefined;
+            let topBase64: string = '';
+            let bottomBase64: string = '';
+            let shoesBase64: string | undefined;
+
+            // Convertir top si existe
+            if (selectedItems.top) {
+                try {
+                    console.log('[Probador] Convirtiendo top a base64...');
+                    topBase64 = await urlToBase64(selectedItems.top.image_url);
+                    console.log('[Probador] Top convertido:', topBase64 ? '✓' : '❌');
+                } catch (e) {
+                    console.error('[Probador] Error convirtiendo top:', e);
+                    Alert.alert('Error', 'No se pudo cargar la imagen de la parte de arriba');
+                    return;
+                }
             }
 
-            // Si solo hay uno, usar placeholder o repetir
+            // Convertir bottom si existe
+            if (selectedItems.bottom) {
+                try {
+                    console.log('[Probador] Convirtiendo bottom a base64...');
+                    bottomBase64 = await urlToBase64(selectedItems.bottom.image_url);
+                    console.log('[Probador] Bottom convertido:', bottomBase64 ? '✓' : '❌');
+                } catch (e) {
+                    console.error('[Probador] Error convirtiendo bottom:', e);
+                    Alert.alert('Error', 'No se pudo cargar la imagen de la parte de abajo');
+                    return;
+                }
+            }
+
+            // Si solo hay una prenda, usarla para ambas posiciones
             const finalTop = topBase64 || bottomBase64;
             const finalBottom = bottomBase64 || topBase64;
 
+            console.log('[Probador] Final - Top:', finalTop ? '✓' : '❌', 'Bottom:', finalBottom ? '✓' : '❌');
+
+            if (selectedItems.outerwear) {
+                try {
+                    console.log('[Probador] Convirtiendo outerwear a base64...');
+                    outerwearBase64 = await urlToBase64(selectedItems.outerwear.image_url);
+                } catch (e) {
+                    console.warn('[Probador] Error convirtiendo outerwear (continuando sin él):', e);
+                }
+            }
+
+            if (selectedItems.shoes) {
+                try {
+                    console.log('[Probador] Convirtiendo shoes a base64...');
+                    shoesBase64 = await urlToBase64(selectedItems.shoes.image_url);
+                } catch (e) {
+                    console.warn('[Probador] Error convirtiendo shoes (continuando sin ellos):', e);
+                }
+            }
+
+            console.log('[Probador] Llamando a generateVirtualTryOn...');
             const result = await generateVirtualTryOn(
                 customerPhoto,
                 finalTop,
@@ -264,17 +310,19 @@ export default function ProbadorScreen() {
             );
 
             if (result) {
+                console.log('[Probador] Resultado obtenido correctamente');
                 setResultImage(result);
                 setShowResult(true);
 
                 // Guardar en historial
                 await saveToHistory(result);
             } else {
+                console.error('[Probador] generateVirtualTryOn retornó null');
                 Alert.alert('Error', 'No se pudo generar el probador virtual. Intenta de nuevo.');
             }
-        } catch (error) {
-            console.error('Error generating virtual try-on:', error);
-            Alert.alert('Error', 'Ocurrio un error al generar el probador virtual');
+        } catch (error: any) {
+            console.error('[Probador] Error generating virtual try-on:', error);
+            Alert.alert('Error', error.message || 'Ocurrio un error al generar el probador virtual');
         } finally {
             setGenerating(false);
         }
