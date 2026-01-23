@@ -1,6 +1,6 @@
 [build]
   base = "IlBacoDaSeta"
-  command = "npx expo export --platform web"
+  command = "npm install && npx expo export --platform web"
   publish = "dist"
 
 [build.environment]
