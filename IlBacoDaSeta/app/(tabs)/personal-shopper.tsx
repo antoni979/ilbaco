@@ -42,7 +42,7 @@ export default function PersonalShopperScreen() {
 
     // Items y resultados
     const [items, setItems] = useState<ClosetItem[]>([]);
-    const [itemsLoaded, setItemsLoaded] = useState(false);
+    const [itemsLoading, setItemsLoading] = useState(true);
     const [recommendedOutfits, setRecommendedOutfits] = useState<RecommendedOutfit[]>([]);
     const [sessionId, setSessionId] = useState<string>('');
 
@@ -56,41 +56,59 @@ export default function PersonalShopperScreen() {
     const [editingCategory, setEditingCategory] = useState<'outerwear' | 'top' | 'bottom' | 'shoes' | null>(null);
     const [editingTab, setEditingTab] = useState<'recommended' | 'alternatives' | 'notRecommended'>('recommended');
 
-    // Cargar items al montar (para web) y al recibir foco (para mobile)
+    // Referencia para evitar múltiples fetches simultáneos
+    const fetchPromiseRef = React.useRef<Promise<ClosetItem[]> | null>(null);
+
+    // Cargar items al montar
     React.useEffect(() => {
-        fetchItems();
+        loadItems();
     }, []);
 
+    // Recargar al volver a la pantalla
     useFocusEffect(
         useCallback(() => {
-            // Re-fetch al volver a la pantalla (mobile)
-            if (itemsLoaded) {
-                fetchItems();
-            }
-        }, [itemsLoaded])
+            loadItems();
+        }, [])
     );
 
-    const fetchItems = async (): Promise<ClosetItem[]> => {
-        try {
-            console.log('[PersonalShopper] Cargando items...');
-            const { data, error } = await supabase
-                .from('items')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            if (!error && data) {
-                console.log(`[PersonalShopper] ${data.length} items cargados`);
-                setItems(data);
-                setItemsLoaded(true);
-                return data;
-            } else {
-                console.error('[PersonalShopper] Error cargando items:', error);
-                return [];
-            }
-        } catch (e) {
-            console.error('[PersonalShopper] Exception:', e);
-            return [];
+    const loadItems = async () => {
+        // Si ya hay un fetch en progreso, esperar a que termine
+        if (fetchPromiseRef.current) {
+            return fetchPromiseRef.current;
         }
+        return fetchItems();
+    };
+
+    const fetchItems = async (): Promise<ClosetItem[]> => {
+        const promise = (async () => {
+            try {
+                setItemsLoading(true);
+                console.log('[PersonalShopper] Cargando items...');
+
+                const { data, error } = await supabase
+                    .from('items')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (!error && data) {
+                    console.log(`[PersonalShopper] ${data.length} items cargados`);
+                    setItems(data);
+                    return data;
+                } else {
+                    console.error('[PersonalShopper] Error cargando items:', error);
+                    return items; // Devolver lo que ya teníamos
+                }
+            } catch (e) {
+                console.error('[PersonalShopper] Exception:', e);
+                return items; // Devolver lo que ya teníamos
+            } finally {
+                setItemsLoading(false);
+                fetchPromiseRef.current = null;
+            }
+        })();
+
+        fetchPromiseRef.current = promise;
+        return promise;
     };
 
     // Capturar foto
@@ -119,9 +137,14 @@ export default function PersonalShopperScreen() {
                     setCustomerPhoto(photoData);
                     setStep('analyzing');
 
-                    // Analizar cliente
-                    const analysis = await analyzeCustomer(manipulated.base64);
-                    setCustomerAnalysis(analysis);
+                    // Analizar cliente con timeout de seguridad
+                    try {
+                        const analysis = await analyzeCustomer(manipulated.base64);
+                        setCustomerAnalysis(analysis);
+                    } catch (e) {
+                        console.error('Error en análisis, continuando sin él:', e);
+                        setCustomerAnalysis(null);
+                    }
                     setStep('event');
                 }
             }
@@ -137,14 +160,44 @@ export default function PersonalShopperScreen() {
         setStep('generating');
 
         try {
-            // Obtener items actualizados directamente si no están cargados
+            // Esperar a que los items estén cargados (máximo 10 segundos)
             let currentItems = items;
-            if (!itemsLoaded || items.length === 0) {
-                console.log('[PersonalShopper] Items no cargados, obteniendo...');
-                currentItems = await fetchItems();
+
+            // Si hay un fetch en progreso, esperar a que termine
+            if (fetchPromiseRef.current) {
+                console.log('[PersonalShopper] Esperando fetch en progreso...');
+                const timeoutPromise = new Promise<ClosetItem[]>((_, reject) =>
+                    setTimeout(() => reject(new Error('Timeout')), 10000)
+                );
+                try {
+                    currentItems = await Promise.race([fetchPromiseRef.current, timeoutPromise]);
+                } catch {
+                    currentItems = items; // Usar lo que tengamos
+                }
+            }
+
+            // Si aún no hay items, hacer fetch con timeout
+            if (currentItems.length === 0) {
+                console.log('[PersonalShopper] Items vacíos, obteniendo...');
+                try {
+                    const timeoutPromise = new Promise<ClosetItem[]>((_, reject) =>
+                        setTimeout(() => reject(new Error('Timeout')), 10000)
+                    );
+                    currentItems = await Promise.race([fetchItems(), timeoutPromise]);
+                } catch {
+                    console.error('[PersonalShopper] Timeout obteniendo items');
+                }
+            }
+
+            // Si todavía no hay items, mostrar error y volver
+            if (currentItems.length === 0) {
+                Alert.alert('Sin prendas', 'No hay prendas en la tienda. Añade algunas primero.');
+                setStep('colors');
+                return;
             }
 
             console.log(`[PersonalShopper] Generando recomendaciones con ${currentItems.length} items`);
+
             const outfits = recommendOutfits({
                 items: currentItems,
                 customerAnalysis,
@@ -155,10 +208,11 @@ export default function PersonalShopperScreen() {
                 avoidColors,
             });
 
+            console.log(`[PersonalShopper] ${outfits.length} outfits generados`);
             setRecommendedOutfits(outfits);
 
-            // Guardar en historial
-            const { data } = await supabase.from('shopper_history').insert({
+            // Guardar en historial (sin bloquear)
+            supabase.from('shopper_history').insert({
                 customer_photo_url: customerPhoto,
                 customer_analysis: customerAnalysis,
                 event_type: eventType,
@@ -173,16 +227,15 @@ export default function PersonalShopperScreen() {
                     shoes_id: o.shoes?.id,
                     score: o.score,
                 })),
-            }).select('session_id').single();
-
-            if (data) {
-                setSessionId(data.session_id);
-            }
+            }).select('session_id').single().then(({ data }) => {
+                if (data) setSessionId(data.session_id);
+            }).catch(e => console.warn('Error guardando historial:', e));
 
             setStep('results');
         } catch (error) {
             console.error('Error generating recommendations:', error);
-            Alert.alert('Error', 'No se pudieron generar las recomendaciones');
+            Alert.alert('Error', 'No se pudieron generar las recomendaciones. Intenta de nuevo.');
+            setStep('colors');
         }
     };
 
@@ -782,10 +835,13 @@ export default function PersonalShopperScreen() {
                     <View className="flex-1 items-center justify-center p-6">
                         <ActivityIndicator size="large" color={colors.primary} />
                         <Text className={`text-lg font-semibold mt-4 ${classes.text}`}>
-                            Creando outfits perfectos...
+                            {itemsLoading ? 'Cargando prendas...' : 'Creando outfits perfectos...'}
                         </Text>
                         <Text className="text-gray-500 mt-2 text-center">
-                            Analizando {items.length} prendas para encontrar las mejores combinaciones
+                            {itemsLoading
+                                ? 'Obteniendo tu colección de la tienda'
+                                : `Analizando ${items.length} prendas para encontrar las mejores combinaciones`
+                            }
                         </Text>
                     </View>
                 );

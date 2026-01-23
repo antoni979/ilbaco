@@ -48,12 +48,42 @@ IMPORTANTE:
 // Modelo economico para analisis
 const ANALYSIS_MODEL = 'gemini-2.0-flash-exp';
 
-export const analyzeCustomer = async (base64Image: string): Promise<CustomerAnalysis | null> => {
+// Análisis por defecto si falla la IA
+const DEFAULT_ANALYSIS: CustomerAnalysis = {
+    skin_tone: 'medio',
+    skin_undertone: 'neutro',
+    body_type: 'medio',
+    height_estimate: 'medio',
+    style_vibe: 'Clásico versátil',
+    recommended_fits: ['Regular', 'Slim fit'],
+    colors_that_favor: ['Azul marino', 'Blanco', 'Beige', 'Negro', 'Gris'],
+    colors_to_avoid: [],
+};
+
+// Timeout para fetch
+const fetchWithTimeout = async (url: string, options: RequestInit, timeoutMs: number): Promise<Response> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+        const response = await fetch(url, { ...options, signal: controller.signal });
+        clearTimeout(timeoutId);
+        return response;
+    } catch (error: any) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+            throw new Error('Timeout: La IA tardó demasiado');
+        }
+        throw error;
+    }
+};
+
+export const analyzeCustomer = async (base64Image: string): Promise<CustomerAnalysis> => {
     const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
 
     if (!apiKey) {
-        console.error("[CustomerAnalysis] Missing EXPO_PUBLIC_GEMINI_API_KEY");
-        return null;
+        console.warn("[CustomerAnalysis] Missing API key, usando análisis por defecto");
+        return DEFAULT_ANALYSIS;
     }
 
     try {
@@ -64,7 +94,7 @@ export const analyzeCustomer = async (base64Image: string): Promise<CustomerAnal
         // Limpiar base64 de prefijos
         const cleanBase64 = base64Image.replace(/^data:image\/\w+;base64,/, '');
 
-        const response = await fetch(url, {
+        const response = await fetchWithTimeout(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -86,19 +116,20 @@ export const analyzeCustomer = async (base64Image: string): Promise<CustomerAnal
                     maxOutputTokens: 1024,
                 }
             })
-        });
+        }, 15000); // 15 segundos timeout
 
         const data = await response.json();
 
         if (!response.ok) {
             console.error("[CustomerAnalysis] Error en la API:", data.error?.message);
-            throw new Error(data.error?.message || "Error al analizar cliente");
+            return DEFAULT_ANALYSIS;
         }
 
         const textOutput = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
         if (!textOutput) {
-            throw new Error("No se recibio respuesta del modelo");
+            console.warn("[CustomerAnalysis] Sin respuesta, usando análisis por defecto");
+            return DEFAULT_ANALYSIS;
         }
 
         // Limpiar y parsear JSON
@@ -118,7 +149,8 @@ export const analyzeCustomer = async (base64Image: string): Promise<CustomerAnal
 
     } catch (error: any) {
         console.error("[CustomerAnalysis] Error:", error.message);
-        return null;
+        console.log("[CustomerAnalysis] Usando análisis por defecto");
+        return DEFAULT_ANALYSIS;
     }
 };
 

@@ -1,4 +1,5 @@
 // Algoritmo de recomendacion de outfits para Personal Shopper
+// Optimizado para moda femenina y velocidad
 
 import { CustomerAnalysis } from './customer_analysis';
 
@@ -38,360 +39,414 @@ interface RecommendationParams {
     avoidColors: string[];
 }
 
-// Mapeo de estilos por tipo de evento
+// ============================================
+// CONFIGURACIÓN DE MODA FEMENINA ACTUAL
+// ============================================
+
+// Estilos por evento (moda femenina 2024-2025)
 const STYLE_BY_EVENT: Record<string, string[]> = {
-    formal: ['Formal', 'Elegante', 'Business'],
-    elegante: ['Elegante', 'Formal', 'Business', 'Fiesta'],
-    trabajo: ['Business', 'Casual', 'Formal'],
-    casual: ['Casual', 'Streetwear', 'Deportivo', 'Vintage'],
+    formal: ['Elegante', 'Formal', 'Business'],
+    elegante: ['Elegante', 'Fiesta', 'Formal'],
+    trabajo: ['Business', 'Elegante', 'Casual'],
+    casual: ['Casual', 'Streetwear', 'Vintage'],
 };
 
-// Categorias de prendas
-const OUTERWEAR_CATEGORIES = ['abrigo', 'chaqueta', 'cazadora', 'blazer', 'gabardina', 'parka', 'plumas', 'cardigan', 'bomber', 'trench'];
-const TOP_CATEGORIES = ['camiseta', 'camisa', 'polo', 'top', 'blusa', 'jersey', 'sudadera', 'chaleco', 'vestido'];
-const BOTTOM_CATEGORIES = ['pantalon', 'pantalón', 'shorts', 'falda', 'jeans', 'vaquero', 'bermuda'];
-const SHOES_CATEGORIES = ['calzado', 'zapato', 'zapatilla', 'bota', 'sandalia', 'deportiva'];
+// Categorías de prendas femeninas
+const OUTERWEAR_CATS = ['abrigo', 'chaqueta', 'blazer', 'gabardina', 'cardigan', 'trench', 'plumas', 'parka'];
+const TOP_CATS = ['camiseta', 'camisa', 'top', 'blusa', 'jersey', 'sudadera', 'body', 'cuerpo'];
+const BOTTOM_CATS = ['pantalón', 'pantalon', 'falda', 'jeans', 'vaquero', 'shorts', 'bermuda'];
+const SHOES_CATS = ['calzado', 'zapato', 'bota', 'sandalia', 'tacón', 'bailarina', 'deportiva', 'zapatilla'];
+const DRESS_CATS = ['vestido', 'mono'];
 
-// Categorias manga corta
-const SHORT_SLEEVE_CATEGORIES = ['camiseta', 'polo', 'top'];
-const LONG_SLEEVE_CATEGORIES = ['camisa', 'jersey', 'sudadera', 'blusa'];
+// Colores neutros (base de cualquier outfit)
+const NEUTRALS = ['negro', 'blanco', 'gris', 'beige', 'crema', 'azul marino', 'camel', 'marrón', 'nude'];
 
-// Colores neutros que combinan con todo
-const NEUTRAL_COLORS = ['negro', 'blanco', 'gris', 'beige', 'azul marino', 'marron', 'camel'];
-
-// Combinaciones clasicas de colores
+// Combinaciones clásicas de moda femenina
 const CLASSIC_COMBOS: [string, string][] = [
-    ['azul marino', 'blanco'],
+    // Básicos atemporales
     ['negro', 'blanco'],
-    ['gris', 'azul'],
-    ['beige', 'azul marino'],
-    ['blanco', 'azul'],
-    ['negro', 'gris'],
-    ['marron', 'beige'],
-    ['verde oliva', 'beige'],
-    ['burdeos', 'gris'],
+    ['negro', 'beige'],
+    ['azul marino', 'blanco'],
+    ['gris', 'rosa'],
+    ['beige', 'blanco'],
+    ['camel', 'negro'],
+    ['crema', 'azul marino'],
+    // Tendencias actuales
+    ['verde', 'beige'],
+    ['burdeos', 'camel'],
+    ['azul', 'beige'],
+    ['rosa', 'gris'],
+    ['lavanda', 'blanco'],
+    ['terracota', 'crema'],
 ];
 
-function normalizeColor(color: string): string {
-    return (color || '').toLowerCase().trim();
-}
+// Colores que chocan (evitar juntos)
+const CLASHING: [string, string][] = [
+    ['rojo', 'naranja'],
+    ['rojo', 'rosa'],
+    ['naranja', 'rosa'],
+    ['verde', 'rojo'],
+    ['morado', 'naranja'],
+];
 
-function isOuterwearCategory(category: string): boolean {
-    const cat = category.toLowerCase();
-    return OUTERWEAR_CATEGORIES.some(c => cat.includes(c));
-}
+// Combinaciones elegantes por evento
+const ELEGANT_COMBOS: Record<string, string[][]> = {
+    formal: [
+        ['negro', 'negro'], // Total black
+        ['azul marino', 'negro'],
+        ['burdeos', 'negro'],
+        ['beige', 'blanco'],
+    ],
+    elegante: [
+        ['negro', 'dorado'],
+        ['burdeos', 'negro'],
+        ['verde', 'negro'],
+        ['azul', 'plata'],
+    ],
+    trabajo: [
+        ['azul marino', 'blanco'],
+        ['gris', 'blanco'],
+        ['beige', 'azul'],
+        ['negro', 'gris'],
+    ],
+    casual: [
+        ['blanco', 'azul'],
+        ['beige', 'blanco'],
+        ['gris', 'rosa'],
+        ['verde', 'blanco'],
+    ],
+};
 
-function isTopCategory(category: string): boolean {
-    const cat = category.toLowerCase();
-    // Excluir outerwear de tops para evitar duplicados
-    if (isOuterwearCategory(cat)) return false;
-    return TOP_CATEGORIES.some(c => cat.includes(c));
-}
+// ============================================
+// FUNCIONES AUXILIARES OPTIMIZADAS
+// ============================================
 
-function isBottomCategory(category: string): boolean {
-    const cat = category.toLowerCase();
-    return BOTTOM_CATEGORIES.some(c => cat.includes(c));
-}
+const normalize = (s: string): string => (s || '').toLowerCase().trim();
 
-function isShoesCategory(category: string): boolean {
-    const cat = category.toLowerCase();
-    return SHOES_CATEGORIES.some(c => cat.includes(c));
-}
+const matchesCategory = (item: ClosetItem, cats: string[]): boolean => {
+    const cat = normalize(item.category || item.characteristics?.category || '');
+    const name = normalize(item.name || '');
+    return cats.some(c => cat.includes(c) || name.includes(c));
+};
 
-function matchesTopLength(item: ClosetItem, length: 'manga_corta' | 'manga_larga'): boolean {
-    const subCat = (item.characteristics?.sub_category || item.name || '').toLowerCase();
-    const cat = (item.category || item.characteristics?.category || '').toLowerCase();
-    const season = (item.characteristics?.season || '').toLowerCase();
+const getColor = (item: ClosetItem): string => normalize(item.characteristics?.color || '');
 
-    // Detectar explicitamente si es manga corta o larga
-    const isExplicitShortSleeve = subCat.includes('manga corta') || subCat.includes('tirantes');
-    const isExplicitLongSleeve = subCat.includes('manga larga');
+const colorMatches = (itemColor: string, colorList: string[]): boolean => {
+    const c = normalize(itemColor);
+    return colorList.some(target => c.includes(normalize(target)) || normalize(target).includes(c));
+};
 
-    // Categorias que son inherentemente manga corta (camiseta != camisa)
-    const isShortSleeveCategory = cat.includes('camiseta') || cat.includes('polo') || cat.includes('top ') || cat === 'top';
-    // Categorias que son inherentemente manga larga (camisa pero NO camiseta)
-    const isLongSleeveCategory = (cat.includes('camisa') && !cat.includes('camiseta')) ||
-                                  cat.includes('jersey') || cat.includes('sudadera') || cat.includes('blusa');
+const isNeutral = (color: string): boolean => colorMatches(color, NEUTRALS);
 
-    if (length === 'manga_corta') {
-        // Excluir si explicitamente dice manga larga
-        if (isExplicitLongSleeve) return false;
-        // Incluir si explicitamente dice manga corta
-        if (isExplicitShortSleeve) return true;
-        // Incluir categorias de manga corta
-        if (isShortSleeveCategory) return true;
-        // Excluir categorias de manga larga
-        if (isLongSleeveCategory) return false;
-        // Items de verano tienden a manga corta
-        if (season.includes('verano') || season.includes('primavera')) return true;
-        // Por defecto, no incluir si no podemos determinar
-        return false;
-    } else {
-        // Excluir si explicitamente dice manga corta
-        if (isExplicitShortSleeve) return false;
-        // Incluir si explicitamente dice manga larga
-        if (isExplicitLongSleeve) return true;
-        // Incluir categorias de manga larga
-        if (isLongSleeveCategory) return true;
-        // Excluir categorias de manga corta
-        if (isShortSleeveCategory) return false;
-        // Items de invierno tienden a manga larga
-        if (season.includes('invierno') || season.includes('otoño')) return true;
-        // Por defecto, no incluir si no podemos determinar
-        return false;
-    }
-}
+const isTopShortSleeve = (item: ClosetItem): boolean => {
+    const cat = normalize(item.category || item.characteristics?.category || '');
+    const name = normalize(item.name);
+    const season = normalize(item.characteristics?.season || '');
 
-function matchesBottomLength(item: ClosetItem, length: 'corto' | 'largo'): boolean {
-    const subCat = (item.characteristics?.sub_category || item.name || '').toLowerCase();
-    const cat = (item.category || item.characteristics?.category || '').toLowerCase();
-    const season = (item.characteristics?.season || '').toLowerCase();
+    // Categorías típicamente manga corta
+    if (cat.includes('camiseta') || cat.includes('top') || cat.includes('body')) return true;
+    // Temporada verano
+    if (season.includes('verano') || season.includes('primavera')) return true;
+    // Nombre indica manga corta
+    if (name.includes('manga corta') || name.includes('tirantes')) return true;
+    return false;
+};
 
-    if (length === 'corto') {
-        // Corto: shorts, bermudas, o items de verano
-        if (cat.includes('short') || cat.includes('bermuda') || cat.includes('corto')) return true;
-        if (subCat.includes('corto') || subCat.includes('short')) return true;
-        if (season.includes('verano') && !cat.includes('pantalon') && !cat.includes('pantalón')) return true;
-        return false;
-    } else {
-        // Largo: pantalones, jeans, faldas, o items de invierno
-        if (cat.includes('pantalon') || cat.includes('pantalón') || cat.includes('jean') || cat.includes('vaquero') || cat.includes('falda')) return true;
-        if (subCat.includes('largo')) return true;
-        // Por defecto los pantalones son largos
-        if (!cat.includes('short') && !cat.includes('bermuda') && !subCat.includes('corto')) return true;
-        return false;
-    }
-}
+const isTopLongSleeve = (item: ClosetItem): boolean => {
+    const cat = normalize(item.category || item.characteristics?.category || '');
+    const name = normalize(item.name);
+    const season = normalize(item.characteristics?.season || '');
 
-function getItemColor(item: ClosetItem): string {
-    return normalizeColor(item.characteristics?.color || '');
-}
+    // Categorías típicamente manga larga
+    if (cat.includes('jersey') || cat.includes('sudadera') || cat.includes('blusa') ||
+        (cat.includes('camisa') && !cat.includes('camiseta'))) return true;
+    // Temporada invierno
+    if (season.includes('invierno') || season.includes('otoño')) return true;
+    // Nombre indica manga larga
+    if (name.includes('manga larga')) return true;
+    return false;
+};
 
-function colorInList(itemColor: string, colorList: string[]): boolean {
-    const normalized = normalizeColor(itemColor);
-    return colorList.some(c => normalized.includes(normalizeColor(c)) || normalizeColor(c).includes(normalized));
-}
+const isBottomShort = (item: ClosetItem): boolean => {
+    const cat = normalize(item.category || item.characteristics?.category || '');
+    const name = normalize(item.name);
+    return cat.includes('short') || cat.includes('bermuda') || name.includes('corto');
+};
 
-function scoreOutfit(
+const isBottomLong = (item: ClosetItem): boolean => {
+    const cat = normalize(item.category || item.characteristics?.category || '');
+    return cat.includes('pantalón') || cat.includes('pantalon') || cat.includes('jean') ||
+           cat.includes('vaquero') || cat.includes('falda');
+};
+
+// ============================================
+// SCORING RÁPIDO Y PRECISO
+// ============================================
+
+const scoreOutfit = (
     top: ClosetItem,
     bottom: ClosetItem,
     shoes: ClosetItem | undefined,
+    outerwear: ClosetItem | undefined,
     params: RecommendationParams
-): { score: number; reasoning: string[] } {
-    let score = 50; // Base score
+): { score: number; reasons: string[] } => {
+    let score = 50;
     const reasons: string[] = [];
 
-    const topColor = getItemColor(top);
-    const bottomColor = getItemColor(bottom);
-    const shoesColor = shoes ? getItemColor(shoes) : '';
+    const topColor = getColor(top);
+    const bottomColor = getColor(bottom);
+    const shoesColor = shoes ? getColor(shoes) : '';
+    const outerwearColor = outerwear ? getColor(outerwear) : '';
 
-    const topStyle = (top.characteristics?.style || '').toLowerCase();
-    const bottomStyle = (bottom.characteristics?.style || '').toLowerCase();
+    const topStyle = normalize(top.characteristics?.style || '');
+    const bottomStyle = normalize(bottom.characteristics?.style || '');
 
-    // 1. Penalizar colores a evitar (CRITICO)
-    if (colorInList(topColor, params.avoidColors)) {
-        score -= 100; // Descalifica
-        reasons.push('Top tiene color a evitar');
-    }
-    if (colorInList(bottomColor, params.avoidColors)) {
-        score -= 100;
-        reasons.push('Bottom tiene color a evitar');
-    }
-    if (shoes && colorInList(shoesColor, params.avoidColors)) {
-        score -= 50;
-        reasons.push('Zapatos tienen color a evitar');
-    }
+    // ========== RESTRICCIONES DEL USUARIO (CRÍTICO) ==========
 
-    // 2. Bonus por colores favoritos
-    if (colorInList(topColor, params.favoriteColors)) {
-        score += 20;
-        reasons.push('+20 Top color favorito');
+    // Colores a evitar - penalización máxima
+    if (colorMatches(topColor, params.avoidColors)) {
+        score -= 200;
+        reasons.push('Top: color a evitar');
     }
-    if (colorInList(bottomColor, params.favoriteColors)) {
-        score += 15;
-        reasons.push('+15 Bottom color favorito');
+    if (colorMatches(bottomColor, params.avoidColors)) {
+        score -= 200;
+        reasons.push('Bottom: color a evitar');
     }
 
-    // 3. Bonus por colores que favorecen al cliente (de su analisis)
+    // Colores favoritos - bonus significativo
+    if (colorMatches(topColor, params.favoriteColors)) {
+        score += 30;
+        reasons.push('Top: color favorito');
+    }
+    if (colorMatches(bottomColor, params.favoriteColors)) {
+        score += 25;
+        reasons.push('Bottom: color favorito');
+    }
+
+    // ========== ANÁLISIS IA DEL CLIENTE ==========
+
     if (params.customerAnalysis) {
-        const favorColors = params.customerAnalysis.colors_that_favor || [];
-        if (colorInList(topColor, favorColors)) {
-            score += 15;
-            reasons.push('+15 Top favorece tono de piel');
+        const { colors_that_favor, colors_to_avoid } = params.customerAnalysis;
+
+        // Colores que favorecen según tono de piel
+        if (colors_that_favor?.length) {
+            if (colorMatches(topColor, colors_that_favor)) {
+                score += 25;
+                reasons.push('Top: favorece tu tono');
+            }
+            if (colorMatches(bottomColor, colors_that_favor)) {
+                score += 15;
+                reasons.push('Bottom: favorece tu tono');
+            }
         }
-        if (colorInList(bottomColor, favorColors)) {
-            score += 10;
-            reasons.push('+10 Bottom favorece tono de piel');
+
+        // Colores que no favorecen según IA
+        if (colors_to_avoid?.length) {
+            if (colorMatches(topColor, colors_to_avoid)) {
+                score -= 40;
+                reasons.push('Top: no favorece tu tono');
+            }
         }
     }
 
-    // 4. Bonus por estilo apropiado al evento
-    const appropriateStyles = STYLE_BY_EVENT[params.eventType] || [];
-    if (appropriateStyles.some(s => topStyle.includes(s.toLowerCase()))) {
-        score += 15;
-        reasons.push('+15 Top estilo apropiado');
-    }
-    if (appropriateStyles.some(s => bottomStyle.includes(s.toLowerCase()))) {
-        score += 10;
-        reasons.push('+10 Bottom estilo apropiado');
-    }
+    // ========== REGLAS DE MODA FEMENINA ==========
 
-    // 5. Bonus por combinaciones clasicas
-    const isClassicCombo = CLASSIC_COMBOS.some(([c1, c2]) =>
+    // Combinaciones clásicas elegantes
+    const isClassic = CLASSIC_COMBOS.some(([c1, c2]) =>
         (topColor.includes(c1) && bottomColor.includes(c2)) ||
         (topColor.includes(c2) && bottomColor.includes(c1))
     );
-    if (isClassicCombo) {
+    if (isClassic) {
+        score += 25;
+        reasons.push('Combinación clásica');
+    }
+
+    // Combinaciones específicas por evento
+    const eventCombos = ELEGANT_COMBOS[params.eventType] || [];
+    const isEventCombo = eventCombos.some(([c1, c2]) =>
+        topColor.includes(c1) && bottomColor.includes(c2)
+    );
+    if (isEventCombo) {
         score += 20;
-        reasons.push('+20 Combinacion clasica de colores');
+        reasons.push('Ideal para el evento');
     }
 
-    // 6. Bonus por contraste (uno neutro, otro con color)
-    const topNeutral = colorInList(topColor, NEUTRAL_COLORS);
-    const bottomNeutral = colorInList(bottomColor, NEUTRAL_COLORS);
-
+    // Contraste equilibrado (uno neutro, uno color)
+    const topNeutral = isNeutral(topColor);
+    const bottomNeutral = isNeutral(bottomColor);
     if ((topNeutral && !bottomNeutral) || (!topNeutral && bottomNeutral)) {
-        score += 12;
-        reasons.push('+12 Buen contraste neutro/color');
+        score += 15;
+        reasons.push('Buen equilibrio de colores');
     }
 
-    // 7. Penalizar dos colores muy vibrantes juntos
-    const vibrantColors = ['rojo', 'naranja', 'amarillo', 'rosa', 'morado', 'verde'];
-    const topVibrant = vibrantColors.some(c => topColor.includes(c));
-    const bottomVibrant = vibrantColors.some(c => bottomColor.includes(c));
-    if (topVibrant && bottomVibrant) {
-        score -= 15;
-        reasons.push('-15 Dos colores vibrantes');
+    // Total look neutro (elegante y seguro)
+    if (topNeutral && bottomNeutral) {
+        score += 10;
+        reasons.push('Look neutro elegante');
     }
 
-    // 8. Bonus si zapatos combinan
+    // Evitar colores que chocan
+    const isClashing = CLASHING.some(([c1, c2]) =>
+        (topColor.includes(c1) && bottomColor.includes(c2)) ||
+        (topColor.includes(c2) && bottomColor.includes(c1))
+    );
+    if (isClashing) {
+        score -= 30;
+        reasons.push('Colores que chocan');
+    }
+
+    // Estilo apropiado al evento
+    const appropriateStyles = STYLE_BY_EVENT[params.eventType] || [];
+    if (appropriateStyles.some(s => topStyle.includes(s.toLowerCase()))) {
+        score += 15;
+        reasons.push('Top: estilo apropiado');
+    }
+    if (appropriateStyles.some(s => bottomStyle.includes(s.toLowerCase()))) {
+        score += 10;
+        reasons.push('Bottom: estilo apropiado');
+    }
+
+    // ========== ACCESORIOS ==========
+
+    // Zapatos que combinan
     if (shoes) {
-        if (shoesColor === topColor || shoesColor === bottomColor) {
+        if (isNeutral(shoesColor)) {
             score += 8;
-            reasons.push('+8 Zapatos combinan');
+            reasons.push('Calzado neutro');
         }
-        if (colorInList(shoesColor, NEUTRAL_COLORS)) {
+        if (shoesColor === topColor || shoesColor === bottomColor) {
             score += 5;
-            reasons.push('+5 Zapatos neutros');
+            reasons.push('Calzado a juego');
         }
     }
 
-    // 9. Penalizar estilos incompatibles
-    const formalStyles = ['formal', 'elegante', 'business'];
-    const casualStyles = ['deportivo', 'streetwear'];
-    const topFormal = formalStyles.some(s => topStyle.includes(s));
-    const bottomCasual = casualStyles.some(s => bottomStyle.includes(s));
-    if (topFormal && bottomCasual) {
-        score -= 20;
-        reasons.push('-20 Estilos incompatibles');
+    // Abrigo que combina
+    if (outerwear) {
+        if (isNeutral(outerwearColor)) {
+            score += 8;
+            reasons.push('Abrigo neutro');
+        }
+        if (colorMatches(outerwearColor, params.favoriteColors)) {
+            score += 10;
+            reasons.push('Abrigo: color favorito');
+        }
     }
 
-    return { score, reasoning: reasons };
-}
+    return { score, reasons };
+};
+
+// ============================================
+// GENERADOR DE OUTFITS OPTIMIZADO
+// ============================================
 
 export function recommendOutfits(params: RecommendationParams): RecommendedOutfit[] {
+    const startTime = Date.now();
     const { items } = params;
 
-    // Separar items por categoria
-    const outerwear = items.filter(item => {
-        const cat = item.category || item.characteristics?.category || '';
-        return isOuterwearCategory(cat);
-    });
+    // Clasificar items por categoría
+    const outerwear = items.filter(i => matchesCategory(i, OUTERWEAR_CATS));
+    const allTops = items.filter(i => matchesCategory(i, TOP_CATS) && !matchesCategory(i, OUTERWEAR_CATS));
+    const allBottoms = items.filter(i => matchesCategory(i, BOTTOM_CATS));
+    const shoes = items.filter(i => matchesCategory(i, SHOES_CATS));
+    const dresses = items.filter(i => matchesCategory(i, DRESS_CATS));
 
-    const tops = items.filter(item => {
-        const cat = item.category || item.characteristics?.category || '';
-        if (!isTopCategory(cat)) return false;
-        return matchesTopLength(item, params.topLength);
-    });
+    // Filtrar por longitud de manga
+    let tops = params.topLength === 'manga_corta'
+        ? allTops.filter(isTopShortSleeve)
+        : allTops.filter(isTopLongSleeve);
 
-    const bottoms = items.filter(item => {
-        const cat = item.category || item.characteristics?.category || '';
-        if (!isBottomCategory(cat)) return false;
-        return matchesBottomLength(item, params.bottomLength);
-    });
-
-    const shoes = items.filter(item => {
-        const cat = item.category || item.characteristics?.category || '';
-        return isShoesCategory(cat);
-    });
-
-    console.log(`[Recommender] Found ${outerwear.length} outerwear, ${tops.length} tops, ${bottoms.length} bottoms, ${shoes.length} shoes`);
-
-    // Si no hay suficientes items, relajar filtros
-    let finalTops = tops;
-    let finalBottoms = bottoms;
-
-    if (tops.length === 0) {
-        finalTops = items.filter(item => {
-            const cat = item.category || item.characteristics?.category || '';
-            return isTopCategory(cat);
-        });
-        console.log(`[Recommender] Relaxed top filter: ${finalTops.length} tops`);
+    // Si no hay suficientes, usar todos los tops
+    if (tops.length < 3) {
+        tops = allTops;
     }
 
-    if (bottoms.length === 0) {
-        finalBottoms = items.filter(item => {
-            const cat = item.category || item.characteristics?.category || '';
-            return isBottomCategory(cat);
-        });
-        console.log(`[Recommender] Relaxed bottom filter: ${finalBottoms.length} bottoms`);
+    // Filtrar por longitud de pantalón
+    let bottoms = params.bottomLength === 'corto'
+        ? allBottoms.filter(isBottomShort)
+        : allBottoms.filter(isBottomLong);
+
+    // Si no hay suficientes, usar todos los bottoms
+    if (bottoms.length < 3) {
+        bottoms = allBottoms;
     }
 
-    // Generar todas las combinaciones y puntuar
-    const allOutfits: RecommendedOutfit[] = [];
+    console.log(`[Recommender] ${tops.length} tops, ${bottoms.length} bottoms, ${shoes.length} shoes, ${outerwear.length} outerwear`);
 
-    for (const top of finalTops) {
-        for (const bottom of finalBottoms) {
-            // Obtener un zapato random o undefined
-            const shoe = shoes.length > 0 ? shoes[Math.floor(Math.random() * shoes.length)] : undefined;
-            // Obtener un abrigo random o undefined
-            const jacket = outerwear.length > 0 ? outerwear[Math.floor(Math.random() * outerwear.length)] : undefined;
+    // Limitar combinaciones para velocidad (máximo 50 de cada)
+    const maxItems = 15;
+    const limitedTops = tops.slice(0, maxItems);
+    const limitedBottoms = bottoms.slice(0, maxItems);
 
-            const { score, reasoning } = scoreOutfit(top, bottom, shoe, params);
+    // Seleccionar abrigo y zapatos una vez (el mejor neutral o favorito)
+    const bestShoes = shoes.find(s =>
+        colorMatches(getColor(s), params.favoriteColors) || isNeutral(getColor(s))
+    ) || shoes[0];
 
-            // Solo incluir si pasa el minimo
+    const bestOuterwear = outerwear.find(o =>
+        colorMatches(getColor(o), params.favoriteColors) || isNeutral(getColor(o))
+    ) || outerwear[0];
+
+    // Generar y puntuar combinaciones
+    const scoredOutfits: RecommendedOutfit[] = [];
+
+    for (const top of limitedTops) {
+        for (const bottom of limitedBottoms) {
+            const { score, reasons } = scoreOutfit(top, bottom, bestShoes, bestOuterwear, params);
+
+            // Solo incluir outfits con score positivo
             if (score > 0) {
-                allOutfits.push({
-                    outerwear: jacket,
+                scoredOutfits.push({
                     top,
                     bottom,
-                    shoes: shoe,
+                    shoes: bestShoes,
+                    outerwear: bestOuterwear,
                     score,
-                    reasoning: reasoning.join(', '),
+                    reasoning: reasons.join(' | '),
                 });
             }
         }
     }
 
-    // Ordenar por score y devolver los 3 mejores
-    allOutfits.sort((a, b) => b.score - a.score);
+    // Ordenar por score
+    scoredOutfits.sort((a, b) => b.score - a.score);
 
-    // Intentar diversificar los outfits (no repetir el mismo top)
+    // Seleccionar top 3 diversificados (no repetir mismo top o bottom)
     const selected: RecommendedOutfit[] = [];
-    const usedTopIds = new Set<number>();
-    const usedBottomIds = new Set<number>();
+    const usedTops = new Set<number>();
+    const usedBottoms = new Set<number>();
 
-    for (const outfit of allOutfits) {
+    for (const outfit of scoredOutfits) {
         if (selected.length >= 3) break;
 
-        // Preferir variedad
-        if (selected.length < 2 || !usedTopIds.has(outfit.top.id) || !usedBottomIds.has(outfit.bottom.id)) {
-            selected.push(outfit);
-            usedTopIds.add(outfit.top.id);
-            usedBottomIds.add(outfit.bottom.id);
+        // Preferir variedad en los primeros 2
+        if (selected.length < 2) {
+            if (!usedTops.has(outfit.top.id) && !usedBottoms.has(outfit.bottom.id)) {
+                selected.push(outfit);
+                usedTops.add(outfit.top.id);
+                usedBottoms.add(outfit.bottom.id);
+            }
+        } else {
+            // El tercero puede repetir algo si es necesario
+            if (!usedTops.has(outfit.top.id) || !usedBottoms.has(outfit.bottom.id)) {
+                selected.push(outfit);
+                usedTops.add(outfit.top.id);
+                usedBottoms.add(outfit.bottom.id);
+            }
         }
     }
 
-    // Si no tenemos 3, rellenar con los mejores disponibles
+    // Si no tenemos 3, rellenar
     if (selected.length < 3) {
-        for (const outfit of allOutfits) {
+        for (const outfit of scoredOutfits) {
             if (selected.length >= 3) break;
-            if (!selected.includes(outfit)) {
+            if (!selected.some(s => s.top.id === outfit.top.id && s.bottom.id === outfit.bottom.id)) {
                 selected.push(outfit);
             }
         }
     }
 
-    console.log(`[Recommender] Returning ${selected.length} outfits`);
+    const elapsed = Date.now() - startTime;
+    console.log(`[Recommender] ${selected.length} outfits en ${elapsed}ms`);
+
     return selected;
 }
