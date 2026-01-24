@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
+import { SizeRecommendationCard } from '@/features/sizing';
 
 type ClothingItem = {
     id: number;
@@ -34,6 +35,8 @@ export default function ItemDetailScreen() {
     const [editMode, setEditMode] = useState(false);
     const [gender, setGender] = useState<'male' | 'female' | null>(null);
     const [showCategoryModal, setShowCategoryModal] = useState(false);
+    const [userId, setUserId] = useState<string | null>(null);
+    const [userPhoto, setUserPhoto] = useState<string | null>(null);
 
     // Estados editables
     const [editedName, setEditedName] = useState('');
@@ -53,14 +56,17 @@ export default function ItemDetailScreen() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
+            setUserId(user.id);
+
             const { data, error } = await supabase
                 .from('profiles')
-                .select('gender')
+                .select('gender, model_photo_url')
                 .eq('id', user.id)
                 .single();
 
             if (!error && data) {
                 setGender(data.gender);
+                setUserPhoto(data.model_photo_url);
             }
         } catch (e) {
             console.error('Error fetching gender:', e);
@@ -190,7 +196,7 @@ export default function ItemDetailScreen() {
     return (
         <SafeAreaView className="flex-1 bg-background-light dark:bg-background-dark" edges={['top']}>
             {/* Header */}
-            <View className="px-6 py-4 border-b border-gray-200 dark:border-white/10 flex-row justify-between items-center">
+            <View className="px-6 py-3 border-b border-gray-200 dark:border-white/10 flex-row justify-between items-center">
                 <TouchableOpacity onPress={() => router.back()} className="flex-row items-center">
                     <Ionicons name="arrow-back" size={24} color="#888" />
                     <Text className="ml-2 text-lg font-semibold text-charcoal dark:text-white">Detalle</Text>
@@ -235,63 +241,75 @@ export default function ItemDetailScreen() {
                 </View>
             </View>
 
-            <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-                {/* Image */}
-                <View className="w-full aspect-[3/4] bg-gray-100 dark:bg-gray-800">
+            {/* Main Content - Image and Details side by side */}
+            <View className="flex-1 flex-row">
+                {/* Image - Left side */}
+                <View className="w-2/5 bg-gray-100 dark:bg-gray-800">
                     <Image source={{ uri: item.image_url }} className="w-full h-full" resizeMode="cover" />
                 </View>
 
-                {/* Details */}
-                <View className="px-8 py-6">
-                    {/* Name - Full Width */}
-                    <View className="mb-8">
-                        <Text className="text-[10px] font-semibold uppercase tracking-[2px] text-primary mb-1.5">
+                {/* Details - Right side */}
+                <View className="flex-1 px-4 py-3">
+                    {/* Recomendación de Talla */}
+                    {userId && (
+                        <SizeRecommendationCard
+                            userId={userId}
+                            brandName={item.brand || ''}
+                            category={item.category || ''}
+                            userPhoto={userPhoto || undefined}
+                            primaryColor="#C9A66B"
+                        />
+                    )}
+
+                    {/* Name */}
+                    <View className="mb-3">
+                        <Text className="text-[9px] font-semibold uppercase tracking-[2px] text-primary mb-0.5">
                             NOMBRE
                         </Text>
                         {editMode ? (
                             <TextInput
                                 value={editedName}
                                 onChangeText={setEditedName}
-                                className="text-2xl text-charcoal dark:text-white"
+                                className="text-lg text-charcoal dark:text-white"
                                 style={{ fontFamily: 'PlayfairDisplay_400Regular' }}
                                 placeholder="Nombre de la prenda"
                                 placeholderTextColor="#999"
                             />
                         ) : (
-                            <Text className="text-2xl text-charcoal dark:text-white" style={{ fontFamily: 'PlayfairDisplay_400Regular' }}>
+                            <Text className="text-lg text-charcoal dark:text-white" style={{ fontFamily: 'PlayfairDisplay_400Regular' }} numberOfLines={2}>
                                 {item.name}
                             </Text>
                         )}
                     </View>
 
-                    {/* Two Column Layout */}
-                    <View className="flex-row gap-6">
+                    {/* Two Column Layout for properties */}
+                    <View className="flex-row gap-4">
                         {/* Left Column */}
                         <View className="flex-1">
                             {/* Brand */}
-                            <View className="mb-6">
-                                <Text className="text-[10px] font-semibold uppercase tracking-[2px] text-primary mb-1.5">
+                            <View className="mb-3">
+                                <Text className="text-[9px] font-semibold uppercase tracking-[2px] text-primary mb-0.5">
                                     MARCA
                                 </Text>
                                 {editMode ? (
                                     <TextInput
                                         value={editedBrand}
                                         onChangeText={setEditedBrand}
-                                        className="text-base text-charcoal dark:text-gray-300"
+                                        className="text-sm text-charcoal dark:text-gray-300"
                                         style={{ fontFamily: 'Manrope_400Regular' }}
                                         placeholder="Marca"
                                         placeholderTextColor="#999"
                                     />
                                 ) : (
-                                    <Text className="text-base text-charcoal dark:text-gray-300" style={{ fontFamily: 'Manrope_400Regular' }}>
+                                    <Text className="text-sm text-charcoal dark:text-gray-300" style={{ fontFamily: 'Manrope_400Regular' }} numberOfLines={1}>
                                         {item.brand || 'Desconocido'}
                                     </Text>
                                 )}
                             </View>
 
                             {/* Category */}
-                            <View className="mb-6">
-                                <Text className="text-[10px] font-semibold uppercase tracking-[2px] text-primary mb-1.5">
+                            <View className="mb-3">
+                                <Text className="text-[9px] font-semibold uppercase tracking-[2px] text-primary mb-0.5">
                                     CATEGORÍA
                                 </Text>
                                 {editMode ? (
@@ -299,51 +317,59 @@ export default function ItemDetailScreen() {
                                         onPress={() => setShowCategoryModal(true)}
                                         className="flex-row justify-between items-center"
                                     >
-                                        <Text className="text-base text-charcoal dark:text-gray-300" style={{ fontFamily: 'Manrope_400Regular' }}>
+                                        <Text className="text-sm text-charcoal dark:text-gray-300" style={{ fontFamily: 'Manrope_400Regular' }}>
                                             {editedCategory || 'Seleccionar...'}
                                         </Text>
-                                        <Ionicons name="chevron-down" size={16} color="#C9A66B" />
+                                        <Ionicons name="chevron-down" size={14} color="#C9A66B" />
                                     </TouchableOpacity>
                                 ) : (
-                                    <Text className="text-base text-charcoal dark:text-gray-300" style={{ fontFamily: 'Manrope_400Regular' }}>
+                                    <Text className="text-sm text-charcoal dark:text-gray-300" style={{ fontFamily: 'Manrope_400Regular' }} numberOfLines={1}>
                                         {item.category}
                                     </Text>
                                 )}
                             </View>
 
-                            {/* Subcategory */}
-                            <View className="mb-6">
-                                <Text className="text-[10px] font-semibold uppercase tracking-[2px] text-primary mb-1.5">
-                                    SUBCATEGORÍA
+                            {/* Season */}
+                            <View className="mb-3">
+                                <Text className="text-[9px] font-semibold uppercase tracking-[2px] text-primary mb-0.5">
+                                    TEMPORADA
                                 </Text>
                                 {editMode ? (
-                                    <TextInput
-                                        value={editedSubCategory}
-                                        onChangeText={setEditedSubCategory}
-                                        className="text-base text-charcoal dark:text-gray-300"
-                                        style={{ fontFamily: 'Manrope_400Regular' }}
-                                        placeholder="Subcategoría"
-                                        placeholderTextColor="#999"
-                                    />
+                                    <View className="flex-row flex-wrap gap-1">
+                                        {seasonOptions.map(season => (
+                                            <TouchableOpacity
+                                                key={season}
+                                                onPress={() => setEditedSeason(season)}
+                                                className={`px-2 py-1 rounded-full border ${editedSeason === season
+                                                        ? 'bg-primary border-primary'
+                                                        : 'border-gray-200 dark:border-white/10'
+                                                    }`}
+                                            >
+                                                <Text className={`text-[10px] ${editedSeason === season ? 'text-white' : 'text-charcoal dark:text-gray-300'}`} style={{ fontFamily: 'Manrope_500Medium' }}>
+                                                    {season}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
                                 ) : (
-                                    <Text className="text-base text-charcoal dark:text-gray-300" style={{ fontFamily: 'Manrope_400Regular' }}>
-                                        {item.characteristics?.sub_category || 'No disponible'}
+                                    <Text className="text-sm text-charcoal dark:text-gray-300" style={{ fontFamily: 'Manrope_400Regular' }}>
+                                        {item.characteristics?.season === 'All Season' ? 'Todo el año' : item.characteristics?.season}
                                     </Text>
                                 )}
                             </View>
 
                             {/* Color */}
                             {item.characteristics?.color && (
-                                <View className="mb-6">
-                                    <Text className="text-[10px] font-semibold uppercase tracking-[2px] text-primary mb-1.5">
+                                <View className="mb-3">
+                                    <Text className="text-[9px] font-semibold uppercase tracking-[2px] text-primary mb-0.5">
                                         COLOR
                                     </Text>
                                     <View className="flex-row items-center flex-wrap">
-                                        <Text className="text-base text-charcoal dark:text-gray-300" style={{ fontFamily: 'Manrope_400Regular' }}>
+                                        <Text className="text-sm text-charcoal dark:text-gray-300" style={{ fontFamily: 'Manrope_400Regular' }}>
                                             {item.characteristics.color}
                                         </Text>
                                         {item.characteristics.secondary_color && (
-                                            <Text className="text-base text-gray-400 dark:text-gray-500 ml-2" style={{ fontFamily: 'Manrope_400Regular' }}>
+                                            <Text className="text-sm text-gray-400 dark:text-gray-500 ml-1" style={{ fontFamily: 'Manrope_400Regular' }}>
                                                 · {item.characteristics.secondary_color}
                                             </Text>
                                         )}
@@ -354,71 +380,63 @@ export default function ItemDetailScreen() {
 
                         {/* Right Column */}
                         <View className="flex-1">
-                            {/* Season */}
-                            <View className="mb-6">
-                                <Text className="text-[10px] font-semibold uppercase tracking-[2px] text-primary mb-1.5">
-                                    TEMPORADA
-                                </Text>
-                                {editMode ? (
-                                    <View className="flex-row flex-wrap gap-2">
-                                        {seasonOptions.map(season => (
-                                            <TouchableOpacity
-                                                key={season}
-                                                onPress={() => setEditedSeason(season)}
-                                                className={`px-3 py-1.5 rounded-full border ${editedSeason === season
-                                                        ? 'bg-primary border-primary'
-                                                        : 'border-gray-200 dark:border-white/10'
-                                                    }`}
-                                            >
-                                                <Text className={`text-xs ${editedSeason === season ? 'text-white' : 'text-charcoal dark:text-gray-300'}`} style={{ fontFamily: 'Manrope_500Medium' }}>
-                                                    {season}
-                                                </Text>
-                                            </TouchableOpacity>
-                                        ))}
-                                    </View>
-                                ) : (
-                                    <Text className="text-base text-charcoal dark:text-gray-300" style={{ fontFamily: 'Manrope_400Regular' }}>
-                                        {item.characteristics?.season === 'All Season' ? 'Todo el año' : item.characteristics?.season}
-                                    </Text>
-                                )}
-                            </View>
-
                             {/* Style */}
-                            <View className="mb-6">
-                                <Text className="text-[10px] font-semibold uppercase tracking-[2px] text-primary mb-1.5">
+                            <View className="mb-3">
+                                <Text className="text-[9px] font-semibold uppercase tracking-[2px] text-primary mb-0.5">
                                     ESTILO
                                 </Text>
                                 {editMode ? (
-                                    <View className="flex-row flex-wrap gap-2">
+                                    <View className="flex-row flex-wrap gap-1">
                                         {styleOptions.map(style => (
                                             <TouchableOpacity
                                                 key={style}
                                                 onPress={() => setEditedStyle(style)}
-                                                className={`px-3 py-1.5 rounded-full border ${editedStyle === style
+                                                className={`px-2 py-1 rounded-full border ${editedStyle === style
                                                         ? 'bg-primary border-primary'
                                                         : 'border-gray-200 dark:border-white/10'
                                                     }`}
                                             >
-                                                <Text className={`text-xs ${editedStyle === style ? 'text-white' : 'text-charcoal dark:text-gray-300'}`} style={{ fontFamily: 'Manrope_500Medium' }}>
+                                                <Text className={`text-[10px] ${editedStyle === style ? 'text-white' : 'text-charcoal dark:text-gray-300'}`} style={{ fontFamily: 'Manrope_500Medium' }}>
                                                     {style}
                                                 </Text>
                                             </TouchableOpacity>
                                         ))}
                                     </View>
                                 ) : (
-                                    <Text className="text-base text-charcoal dark:text-gray-300" style={{ fontFamily: 'Manrope_400Regular' }}>
+                                    <Text className="text-sm text-charcoal dark:text-gray-300" style={{ fontFamily: 'Manrope_400Regular' }}>
                                         {item.characteristics?.style || 'No especificado'}
+                                    </Text>
+                                )}
+                            </View>
+
+                            {/* Subcategory */}
+                            <View className="mb-3">
+                                <Text className="text-[9px] font-semibold uppercase tracking-[2px] text-primary mb-0.5">
+                                    SUBCATEGORÍA
+                                </Text>
+                                {editMode ? (
+                                    <TextInput
+                                        value={editedSubCategory}
+                                        onChangeText={setEditedSubCategory}
+                                        className="text-sm text-charcoal dark:text-gray-300"
+                                        style={{ fontFamily: 'Manrope_400Regular' }}
+                                        placeholder="Subcategoría"
+                                        placeholderTextColor="#999"
+                                    />
+                                ) : (
+                                    <Text className="text-sm text-charcoal dark:text-gray-300" style={{ fontFamily: 'Manrope_400Regular' }} numberOfLines={1}>
+                                        {item.characteristics?.sub_category || '-'}
                                     </Text>
                                 )}
                             </View>
 
                             {/* Pattern */}
                             {item.characteristics?.pattern && item.characteristics.pattern !== 'Solid' && (
-                                <View className="mb-6">
-                                    <Text className="text-[10px] font-semibold uppercase tracking-[2px] text-primary mb-1.5">
+                                <View className="mb-3">
+                                    <Text className="text-[9px] font-semibold uppercase tracking-[2px] text-primary mb-0.5">
                                         PATRÓN
                                     </Text>
-                                    <Text className="text-base text-charcoal dark:text-gray-300" style={{ fontFamily: 'Manrope_400Regular' }}>
+                                    <Text className="text-sm text-charcoal dark:text-gray-300" style={{ fontFamily: 'Manrope_400Regular' }}>
                                         {item.characteristics.pattern}
                                     </Text>
                                 </View>
@@ -426,11 +444,11 @@ export default function ItemDetailScreen() {
 
                             {/* Material */}
                             {item.characteristics?.material_guess && (
-                                <View className="mb-6">
-                                    <Text className="text-[10px] font-semibold uppercase tracking-[2px] text-primary mb-1.5">
+                                <View className="mb-3">
+                                    <Text className="text-[9px] font-semibold uppercase tracking-[2px] text-primary mb-0.5">
                                         MATERIAL
                                     </Text>
-                                    <Text className="text-base text-charcoal dark:text-gray-300" style={{ fontFamily: 'Manrope_400Regular' }}>
+                                    <Text className="text-sm text-charcoal dark:text-gray-300" style={{ fontFamily: 'Manrope_400Regular' }}>
                                         {item.characteristics.material_guess}
                                     </Text>
                                 </View>
@@ -438,7 +456,7 @@ export default function ItemDetailScreen() {
                         </View>
                     </View>
                 </View>
-            </ScrollView>
+            </View>
 
             {/* Category Selection Modal */}
             <Modal
