@@ -186,7 +186,7 @@ CREATE TABLE IF NOT EXISTS public.user_sizing_profile (
     reference_size_top text,            -- Talla que usa en tops (ej: 'M', '40')
     reference_size_bottom text,         -- Talla que usa en bottoms
     reference_size_shoes text,          -- Talla de calzado
-    preferred_fit text DEFAULT 'regular', -- 'slim', 'regular', 'loose'
+    preferred_fit text DEFAULT 'regular', -- 'ajustado', 'regular', 'holgado'
 
     -- Medidas manuales del usuario (en cm)
     chest_cm int,                       -- Contorno de pecho

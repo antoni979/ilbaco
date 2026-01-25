@@ -72,6 +72,7 @@ interface ManualMeasurements {
     shoeSize: string;      // EU
     referenceBrand: string;
     referenceSize: string;
+    fitPreference: 'ajustado' | 'regular' | 'holgado';
 }
 
 type CalculationMode = 'ai' | 'manual';
@@ -183,6 +184,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
         shoeSize: '',
         referenceBrand: 'Zara',
         referenceSize: 'M',
+        fitPreference: 'regular',
     });
 
     // Cargar medidas guardadas al abrir
@@ -213,6 +215,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
                     shoeSize: profile.shoe_size_eu || '',
                     referenceBrand: profile.reference_brand || 'Zara',
                     referenceSize: profile.reference_size_top || 'M',
+                    fitPreference: (profile.preferred_fit as 'ajustado' | 'regular' | 'holgado') || 'regular',
                 });
                 setHasSavedMeasurements(profile.measurements_saved || false);
             }
@@ -236,6 +239,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
                 shoe_size_eu: measurements.shoeSize || undefined,
                 reference_brand: measurements.referenceBrand.toLowerCase(),
                 reference_size_top: measurements.referenceSize,
+                preferred_fit: measurements.fitPreference,
                 measurements_saved: true,
             });
             setHasSavedMeasurements(true);
@@ -261,11 +265,26 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
         setCalculated(false);
 
         try {
-            // 1. Analizar la foto con Gemini
-            const analysis = await analyzeSizingFromPhoto(customerPhoto);
+            // 1. Analizar la foto con Gemini (pasamos altura si la tiene)
+            const heightCm = measurements.height ? parseInt(measurements.height, 10) : undefined;
+            const analysis = await analyzeSizingFromPhoto(customerPhoto, heightCm);
             setAiAnalysis(analysis);
 
-            // 2. Calcular recomendaciones para cada item
+            // 2. Guardar datos para futuras consultas
+            if (userId && (measurements.height || measurements.referenceSize)) {
+                await saveSizingProfile(userId, {
+                    height_cm: heightCm,
+                    reference_size_top: measurements.referenceSize || undefined,
+                    reference_brand: 'zara',
+                    preferred_fit: measurements.fitPreference,
+                    ai_body_type: analysis.body_type,
+                    ai_shoulder_width: analysis.shoulder_width,
+                    ai_fit_adjustment: analysis.fit_adjustment,
+                    ai_confidence: analysis.confidence,
+                });
+            }
+
+            // 3. Calcular recomendaciones para cada item
             const newRecommendations: SizeRecommendation[] = [];
 
             for (const item of activeItems) {
@@ -277,20 +296,27 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
                 const brandOffset = brandRules?.offset || 0;
                 const brandFit = brandRules?.fitStyle || 'regular';
 
-                // Calcular talla base según análisis IA
+                // Calcular talla base: priorizar talla de referencia si existe
                 let baseSize = 'M'; // Default
+                let usedReference = false;
 
-                // Ajustar según body_type
-                if (analysis.body_type === 'delgado') {
-                    baseSize = 'S';
-                } else if (analysis.body_type === 'atletico') {
-                    baseSize = 'M';
-                } else if (analysis.body_type === 'medio') {
-                    baseSize = 'M';
-                } else if (analysis.body_type === 'robusto') {
-                    baseSize = 'L';
-                } else if (analysis.body_type === 'corpulento') {
-                    baseSize = 'XL';
+                // Si el usuario indicó su talla de referencia, usarla como base
+                if (measurements.referenceSize) {
+                    baseSize = measurements.referenceSize;
+                    usedReference = true;
+                } else {
+                    // Si no hay referencia, calcular según body_type de la IA
+                    if (analysis.body_type === 'delgado') {
+                        baseSize = 'S';
+                    } else if (analysis.body_type === 'atletico') {
+                        baseSize = 'M';
+                    } else if (analysis.body_type === 'medio') {
+                        baseSize = 'M';
+                    } else if (analysis.body_type === 'robusto') {
+                        baseSize = 'L';
+                    } else if (analysis.body_type === 'corpulento') {
+                        baseSize = 'XL';
+                    }
                 }
 
                 // Ajuste adicional por hombros anchos (para tops)
@@ -299,15 +325,38 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
                     extraOffset += 0.5;
                 }
 
-                // Aplicar offset de marca + ajuste IA
-                const totalOffset = brandOffset + analysis.fit_adjustment + extraOffset;
+                // Ajuste por preferencia de fit
+                let fitPrefOffset = 0;
+                if (measurements.fitPreference === 'ajustado') {
+                    fitPrefOffset = -0.5; // Talla más pequeña para ajuste ceñido
+                } else if (measurements.fitPreference === 'holgado') {
+                    fitPrefOffset = 0.5;  // Talla más grande para ajuste holgado
+                }
+
+                // Si usamos referencia, aplicamos solo el offset de marca + ajuste por hombros + preferencia
+                // Si no hay referencia, aplicamos también el fit_adjustment de la IA
+                let totalOffset: number;
+                if (usedReference) {
+                    // Con referencia: solo ajustamos por marca, características físicas y preferencia
+                    totalOffset = brandOffset + extraOffset + fitPrefOffset;
+                    // Si la IA detecta algo muy diferente a la talla de referencia, ajustar ligeramente
+                    if (analysis.fit_adjustment > 0.5 || analysis.fit_adjustment < -0.5) {
+                        totalOffset += analysis.fit_adjustment * 0.5; // Peso reducido
+                    }
+                } else {
+                    // Sin referencia: usamos el ajuste completo de la IA + preferencia
+                    totalOffset = brandOffset + analysis.fit_adjustment + extraOffset + fitPrefOffset;
+                }
+
                 const { recommended, alternative } = applyBrandOffset(baseSize, totalOffset);
 
-                // Determinar confianza
+                // Determinar confianza (mayor si tenemos altura + referencia)
                 let confidence: 'high' | 'medium' | 'low' = 'medium';
-                if (analysis.confidence >= 0.8) {
+                const hasExtraData = measurements.height || measurements.referenceSize;
+
+                if (analysis.confidence >= 0.8 || (analysis.confidence >= 0.6 && hasExtraData)) {
                     confidence = 'high';
-                } else if (analysis.confidence < 0.5) {
+                } else if (analysis.confidence < 0.5 && !hasExtraData) {
                     confidence = 'low';
                 }
 
@@ -350,6 +399,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
             await saveMeasurements();
 
             const newRecommendations: SizeRecommendation[] = [];
+            const heightCm = measurements.height ? parseInt(measurements.height, 10) : 0;
 
             for (const item of activeItems) {
                 const category = mapCategoryToSizing(item.category || item.characteristics?.category || '');
@@ -361,6 +411,26 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
                 const brandFit = brandRules?.fitStyle || 'regular';
 
                 let baseSize = measurements.referenceSize || 'M';
+                let heightAdjustment = 0;
+
+                // Ajuste por altura (afecta principalmente a tops)
+                if (heightCm > 0 && category === 'tops') {
+                    if (heightCm > 185) {
+                        // Personas altas pueden necesitar talla más grande para largo de manga/torso
+                        heightAdjustment = 0.5;
+                    } else if (heightCm < 165) {
+                        // Personas bajas pueden necesitar talla más pequeña
+                        heightAdjustment = -0.5;
+                    }
+                }
+
+                // Ajuste por preferencia de fit
+                let fitPrefOffset = 0;
+                if (measurements.fitPreference === 'ajustado') {
+                    fitPrefOffset = -0.5; // Talla más pequeña para ajuste ceñido
+                } else if (measurements.fitPreference === 'holgado') {
+                    fitPrefOffset = 0.5;  // Talla más grande para ajuste holgado
+                }
 
                 // Si hay medidas específicas, calcular talla
                 if (category === 'tops' && measurements.chest) {
@@ -388,15 +458,27 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
                     continue;
                 }
 
-                // Aplicar offset de marca
-                const { recommended, alternative } = applyBrandOffset(baseSize, brandOffset);
+                // Aplicar offset de marca + ajuste por altura + preferencia de fit
+                const totalOffset = brandOffset + heightAdjustment + fitPrefOffset;
+                const { recommended, alternative } = applyBrandOffset(baseSize, totalOffset);
+
+                // Determinar confianza (mayor si tenemos más datos)
+                let confidence: 'high' | 'medium' | 'low' = 'medium';
+                const hasMeasures = measurements.chest || measurements.waist;
+                const hasHeight = heightCm > 0;
+
+                if (hasMeasures && hasHeight) {
+                    confidence = 'high';
+                } else if (hasMeasures || (measurements.referenceSize && hasHeight)) {
+                    confidence = 'high';
+                }
 
                 newRecommendations.push({
                     item,
                     category,
                     recommendedSize: recommended,
                     alternativeSize: alternative,
-                    confidence: measurements.chest || measurements.waist ? 'high' : 'medium',
+                    confidence,
                     brandOffset,
                     brandFit,
                 });
@@ -450,7 +532,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
     const renderAIMode = () => (
         <View>
             {!calculated ? (
-                <>
+                <ScrollView showsVerticalScrollIndicator={false}>
                     {/* Preview de foto y prendas */}
                     <View className="flex-row gap-4 mb-6">
                         <View className="w-24 h-32 rounded-xl overflow-hidden border border-gray-200">
@@ -472,15 +554,78 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
                         </View>
                     </View>
 
+                    {/* Datos adicionales para mejorar precision */}
+                    <View className="bg-gray-50 rounded-xl p-4 mb-4">
+                        <Text className="text-sm font-medium text-gray-700 mb-3">
+                            Datos adicionales (mejoran la precision)
+                        </Text>
+
+                        {/* Altura */}
+                        <View className="mb-4">
+                            <Text className="text-xs text-gray-500 mb-1">Tu altura (cm)</Text>
+                            <TextInput
+                                className="bg-white rounded-xl px-4 py-3 text-gray-900 border border-gray-200"
+                                placeholder="Ej: 175"
+                                keyboardType="numeric"
+                                value={measurements.height}
+                                onChangeText={(v) => setMeasurements(m => ({ ...m, height: v }))}
+                                maxLength={3}
+                            />
+                        </View>
+
+                        {/* Talla de referencia */}
+                        <Text className="text-xs text-gray-500 mb-2">Tu talla habitual en Zara / H&M</Text>
+                        <View className="flex-row flex-wrap gap-2 mb-4">
+                            {REFERENCE_SIZES.map((size) => (
+                                <TouchableOpacity
+                                    key={size}
+                                    onPress={() => setMeasurements(m => ({ ...m, referenceSize: size }))}
+                                    className={`px-4 py-2.5 rounded-xl ${measurements.referenceSize === size ? '' : 'bg-white border border-gray-200'}`}
+                                    style={measurements.referenceSize === size ? { backgroundColor: primaryColor } : {}}
+                                >
+                                    <Text className={`font-medium ${measurements.referenceSize === size ? 'text-white' : 'text-gray-700'}`}>
+                                        {size}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
+                        {/* Preferencia de fit */}
+                        <Text className="text-xs text-gray-500 mb-2">Como te gusta que te quede la ropa?</Text>
+                        <View className="flex-row gap-2">
+                            {[
+                                { key: 'ajustado', label: 'Ajustada', icon: 'compress' },
+                                { key: 'regular', label: 'Normal', icon: 'remove' },
+                                { key: 'holgado', label: 'Holgada', icon: 'expand' },
+                            ].map((fit) => (
+                                <TouchableOpacity
+                                    key={fit.key}
+                                    onPress={() => setMeasurements(m => ({ ...m, fitPreference: fit.key as 'ajustado' | 'regular' | 'holgado' }))}
+                                    className={`flex-1 py-3 rounded-xl items-center ${measurements.fitPreference === fit.key ? '' : 'bg-white border border-gray-200'}`}
+                                    style={measurements.fitPreference === fit.key ? { backgroundColor: primaryColor } : {}}
+                                >
+                                    <MaterialIcons
+                                        name={fit.icon as any}
+                                        size={18}
+                                        color={measurements.fitPreference === fit.key ? '#fff' : '#6b7280'}
+                                    />
+                                    <Text className={`text-xs mt-1 font-medium ${measurements.fitPreference === fit.key ? 'text-white' : 'text-gray-600'}`}>
+                                        {fit.label}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
+
                     <View className="bg-blue-50 rounded-xl p-4 mb-4">
                         <View className="flex-row items-start gap-3">
                             <MaterialIcons name="info" size={20} color="#3b82f6" />
                             <Text className="flex-1 text-sm text-blue-700">
-                                La IA analizara tu complexion, hombros y proporciones para darte una recomendacion precisa.
+                                La IA combinara tu foto con estos datos para darte una recomendacion mucho mas precisa.
                             </Text>
                         </View>
                     </View>
-                </>
+                </ScrollView>
             ) : (
                 renderResults()
             )}
@@ -599,6 +744,34 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
                             >
                                 <Text className={`font-medium ${measurements.referenceSize === size ? 'text-white' : 'text-gray-700'}`}>
                                     {size}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+
+                    {/* Preferencia de fit */}
+                    <Text className="text-sm font-medium text-gray-700 mb-2">
+                        Como te gusta que te quede?
+                    </Text>
+                    <View className="flex-row gap-2 mb-6">
+                        {[
+                            { key: 'ajustado', label: 'Ajustada', icon: 'compress' },
+                            { key: 'regular', label: 'Normal', icon: 'remove' },
+                            { key: 'holgado', label: 'Holgada', icon: 'expand' },
+                        ].map((fit) => (
+                            <TouchableOpacity
+                                key={fit.key}
+                                onPress={() => setMeasurements(m => ({ ...m, fitPreference: fit.key as 'ajustado' | 'regular' | 'holgado' }))}
+                                className={`flex-1 py-3 rounded-xl items-center ${measurements.fitPreference === fit.key ? '' : 'bg-gray-100'}`}
+                                style={measurements.fitPreference === fit.key ? { backgroundColor: primaryColor } : {}}
+                            >
+                                <MaterialIcons
+                                    name={fit.icon as any}
+                                    size={20}
+                                    color={measurements.fitPreference === fit.key ? '#fff' : '#6b7280'}
+                                />
+                                <Text className={`text-xs mt-1 font-medium ${measurements.fitPreference === fit.key ? 'text-white' : 'text-gray-600'}`}>
+                                    {fit.label}
                                 </Text>
                             </TouchableOpacity>
                         ))}

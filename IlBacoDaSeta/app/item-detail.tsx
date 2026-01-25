@@ -21,6 +21,7 @@ type ClothingItem = {
         pattern: string;
         material_guess?: string;
         occasion?: string;
+        size_offset?: number; // Offset de tallaje: -1 (pequeña), 0 (normal), +1 (grande)
     };
 };
 
@@ -45,6 +46,7 @@ export default function ItemDetailScreen() {
     const [editedSubCategory, setEditedSubCategory] = useState('');
     const [editedSeason, setEditedSeason] = useState('');
     const [editedStyle, setEditedStyle] = useState('');
+    const [editedSizeOffset, setEditedSizeOffset] = useState<number>(0);
 
     useEffect(() => {
         fetchItem();
@@ -100,6 +102,7 @@ export default function ItemDetailScreen() {
             setEditedSubCategory(data.characteristics?.sub_category || '');
             setEditedSeason(data.characteristics?.season || '');
             setEditedStyle(data.characteristics?.style || '');
+            setEditedSizeOffset(data.characteristics?.size_offset || 0);
         } catch (error) {
             console.error('Error fetching item:', error);
             Alert.alert('Error', 'No se pudo cargar la prenda');
@@ -118,6 +121,7 @@ export default function ItemDetailScreen() {
                 sub_category: editedSubCategory,
                 season: editedSeason,
                 style: editedStyle,
+                size_offset: editedSizeOffset,
             };
 
             const { error } = await supabase
@@ -258,6 +262,7 @@ export default function ItemDetailScreen() {
                             category={item.category || ''}
                             userPhoto={userPhoto || undefined}
                             primaryColor="#C9A66B"
+                            itemSizeOffset={item.characteristics?.size_offset || 0}
                         />
                     )}
 
@@ -426,6 +431,45 @@ export default function ItemDetailScreen() {
                                 ) : (
                                     <Text className="text-sm text-charcoal dark:text-gray-300" style={{ fontFamily: 'Manrope_400Regular' }} numberOfLines={1}>
                                         {item.characteristics?.sub_category || '-'}
+                                    </Text>
+                                )}
+                            </View>
+
+                            {/* Tallaje / Size Offset */}
+                            <View className="mb-3">
+                                <Text className="text-[9px] font-semibold uppercase tracking-[2px] text-primary mb-0.5">
+                                    TALLAJE
+                                </Text>
+                                {editMode ? (
+                                    <View className="flex-row gap-2">
+                                        {[
+                                            { value: -1, label: '-1', desc: 'Pequeña' },
+                                            { value: 0, label: '0', desc: 'Normal' },
+                                            { value: 1, label: '+1', desc: 'Grande' },
+                                        ].map((opt) => (
+                                            <TouchableOpacity
+                                                key={opt.value}
+                                                onPress={() => setEditedSizeOffset(opt.value)}
+                                                className={`flex-1 py-2 rounded-lg items-center border ${
+                                                    editedSizeOffset === opt.value
+                                                        ? 'bg-primary border-primary'
+                                                        : 'border-gray-200 dark:border-white/10'
+                                                }`}
+                                            >
+                                                <Text className={`text-sm font-semibold ${editedSizeOffset === opt.value ? 'text-white' : 'text-charcoal dark:text-gray-300'}`}>
+                                                    {opt.label}
+                                                </Text>
+                                                <Text className={`text-[9px] ${editedSizeOffset === opt.value ? 'text-white/80' : 'text-gray-400'}`}>
+                                                    {opt.desc}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                ) : (
+                                    <Text className="text-sm text-charcoal dark:text-gray-300" style={{ fontFamily: 'Manrope_400Regular' }}>
+                                        {item.characteristics?.size_offset === -1 ? 'Talla pequeña (-1)' :
+                                         item.characteristics?.size_offset === 1 ? 'Talla grande (+1)' :
+                                         'Normal (0)'}
                                     </Text>
                                 )}
                             </View>

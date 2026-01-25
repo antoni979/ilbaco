@@ -17,6 +17,7 @@ import {
     Alert,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import {
     getSizingProfile,
     saveSizingProfile,
@@ -35,6 +36,7 @@ interface SizeRecommendationCardProps {
     category: string; // Categoria de la prenda (Camiseta, Pantalón, etc.)
     userPhoto?: string; // base64 de foto del usuario (opcional, para análisis IA)
     primaryColor?: string;
+    itemSizeOffset?: number; // Offset de talla de la prenda (-1, 0, +1)
 }
 
 // ------------------------------------------------------------
@@ -117,6 +119,7 @@ export const SizeRecommendationCard: React.FC<SizeRecommendationCardProps> = ({
     category,
     userPhoto,
     primaryColor = '#C9A66B',
+    itemSizeOffset = 0,
 }) => {
     const [loading, setLoading] = useState(true);
     const [profile, setProfile] = useState<UserSizingProfile | null>(null);
@@ -133,7 +136,7 @@ export const SizeRecommendationCard: React.FC<SizeRecommendationCardProps> = ({
         if (profile?.measurements_saved || profile?.reference_size_top) {
             calculateRecommendation();
         }
-    }, [profile, brandName, category]);
+    }, [profile, brandName, category, itemSizeOffset]);
 
     const loadProfile = async () => {
         setLoading(true);
@@ -178,8 +181,10 @@ export const SizeRecommendationCard: React.FC<SizeRecommendationCardProps> = ({
             baseSize = profile.reference_size_top;
         }
 
-        // Aplicar offset de marca
-        const result = applyBrandOffset(baseSize, brandOffset);
+        // Aplicar offset de marca + offset de la prenda
+        // itemSizeOffset: -1 = talla pequeña (subir), 0 = normal, +1 = talla grande (bajar)
+        const totalOffset = brandOffset - itemSizeOffset;
+        const result = applyBrandOffset(baseSize, totalOffset);
         setRecommendation({ size: result.recommended, alternative: result.alternative });
     };
 
@@ -224,6 +229,8 @@ export const SizeRecommendationCard: React.FC<SizeRecommendationCardProps> = ({
                     userId={userId}
                     userPhoto={userPhoto}
                     primaryColor={primaryColor}
+                    itemSizeOffset={itemSizeOffset}
+                    brandName={brandName}
                     onSave={() => {
                         loadProfile();
                         setShowConfigModal(false);
@@ -281,6 +288,8 @@ export const SizeRecommendationCard: React.FC<SizeRecommendationCardProps> = ({
                 userPhoto={userPhoto}
                 primaryColor={primaryColor}
                 initialProfile={profile}
+                itemSizeOffset={itemSizeOffset}
+                brandName={brandName}
                 onSave={() => {
                     loadProfile();
                     setShowConfigModal(false);
@@ -302,6 +311,8 @@ interface ConfigureSizeModalProps {
     primaryColor: string;
     initialProfile?: UserSizingProfile | null;
     onSave: () => void;
+    itemSizeOffset?: number; // Offset de tallaje de la prenda
+    brandName?: string;
 }
 
 const ConfigureSizeModal: React.FC<ConfigureSizeModalProps> = ({
@@ -312,6 +323,8 @@ const ConfigureSizeModal: React.FC<ConfigureSizeModalProps> = ({
     primaryColor,
     initialProfile,
     onSave,
+    itemSizeOffset = 0,
+    brandName = '',
 }) => {
     const [mode, setMode] = useState<'manual' | 'ai'>('manual');
     const [saving, setSaving] = useState(false);
@@ -324,18 +337,32 @@ const ConfigureSizeModal: React.FC<ConfigureSizeModalProps> = ({
     const [hip, setHip] = useState(initialProfile?.hip_cm?.toString() || '');
     const [shoeSize, setShoeSize] = useState(initialProfile?.shoe_size_eu || '');
     const [referenceSize, setReferenceSize] = useState(initialProfile?.reference_size_top || 'M');
+    const [fitPreference, setFitPreference] = useState<'ajustado' | 'regular' | 'holgado'>(
+        (initialProfile?.preferred_fit as 'ajustado' | 'regular' | 'holgado') || 'regular'
+    );
 
     // Resultado IA
     const [aiResult, setAiResult] = useState<string | null>(null);
+    const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+
+    // Foto a usar: la seleccionada o la del perfil
+    const photoToUse = selectedPhoto || userPhoto;
 
     useEffect(() => {
-        if (visible && initialProfile) {
-            setHeight(initialProfile.height_cm?.toString() || '');
-            setChest(initialProfile.chest_cm?.toString() || '');
-            setWaist(initialProfile.waist_cm?.toString() || '');
-            setHip(initialProfile.hip_cm?.toString() || '');
-            setShoeSize(initialProfile.shoe_size_eu || '');
-            setReferenceSize(initialProfile.reference_size_top || 'M');
+        if (visible) {
+            // Resetear foto seleccionada al abrir
+            setSelectedPhoto(null);
+            setAiResult(null);
+
+            if (initialProfile) {
+                setHeight(initialProfile.height_cm?.toString() || '');
+                setChest(initialProfile.chest_cm?.toString() || '');
+                setWaist(initialProfile.waist_cm?.toString() || '');
+                setHip(initialProfile.hip_cm?.toString() || '');
+                setShoeSize(initialProfile.shoe_size_eu || '');
+                setReferenceSize(initialProfile.reference_size_top || 'M');
+                setFitPreference((initialProfile.preferred_fit as 'ajustado' | 'regular' | 'holgado') || 'regular');
+            }
         }
     }, [visible, initialProfile]);
 
@@ -350,6 +377,7 @@ const ConfigureSizeModal: React.FC<ConfigureSizeModalProps> = ({
                 shoe_size_eu: shoeSize || undefined,
                 reference_size_top: referenceSize,
                 reference_size_bottom: referenceSize,
+                preferred_fit: fitPreference,
                 measurements_saved: !!(chest || waist),
             });
             onSave();
@@ -360,30 +388,97 @@ const ConfigureSizeModal: React.FC<ConfigureSizeModalProps> = ({
         }
     };
 
+    const handlePickImage = async () => {
+        try {
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [3, 4],
+                quality: 0.8,
+                base64: true,
+            });
+
+            if (!result.canceled && result.assets[0].base64) {
+                setSelectedPhoto(`data:image/jpeg;base64,${result.assets[0].base64}`);
+                setAiResult(null); // Resetear resultado previo
+            }
+        } catch (error) {
+            Alert.alert('Error', 'No se pudo cargar la imagen');
+        }
+    };
+
     const handleAnalyzeWithAI = async () => {
-        if (!userPhoto) {
-            Alert.alert('Sin foto', 'Necesitas una foto de perfil para el análisis con IA');
+        if (!photoToUse) {
+            Alert.alert('Sin foto', 'Selecciona una foto para el análisis con IA');
             return;
         }
 
         setAnalyzing(true);
         try {
-            const analysis = await analyzeSizingFromPhoto(userPhoto);
+            // Pasar la altura para mejor precision
+            const heightCm = height ? parseInt(height, 10) : undefined;
+            const analysis = await analyzeSizingFromPhoto(photoToUse, heightCm);
 
-            // Determinar talla base según análisis
-            let suggestedSize = 'M';
-            if (analysis.body_type === 'delgado') suggestedSize = 'S';
-            else if (analysis.body_type === 'atletico') suggestedSize = 'M';
-            else if (analysis.body_type === 'robusto') suggestedSize = 'L';
-            else if (analysis.body_type === 'corpulento') suggestedSize = 'XL';
+            // La IA calcula la talla de forma INDEPENDIENTE
+            let aiCalculatedSize = 'M';
+            if (analysis.body_type === 'delgado') aiCalculatedSize = 'S';
+            else if (analysis.body_type === 'atletico') aiCalculatedSize = 'M';
+            else if (analysis.body_type === 'medio') aiCalculatedSize = 'M';
+            else if (analysis.body_type === 'robusto') aiCalculatedSize = 'L';
+            else if (analysis.body_type === 'corpulento') aiCalculatedSize = 'XL';
 
-            setReferenceSize(suggestedSize);
-            setAiResult(`Complexión: ${analysis.body_type} - Talla sugerida: ${suggestedSize}`);
+            // Ajustar por hombros anchos
+            const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+            let sizeIndex = sizeOrder.indexOf(aiCalculatedSize);
+            if (analysis.shoulder_width === 'ancho' && sizeIndex < sizeOrder.length - 1) {
+                sizeIndex += 1;
+                aiCalculatedSize = sizeOrder[sizeIndex];
+            }
 
-            // Guardar análisis
+            // Ajustar por fit_adjustment de la IA
+            if (analysis.fit_adjustment >= 0.5 && sizeIndex < sizeOrder.length - 1) {
+                sizeIndex += 1;
+                aiCalculatedSize = sizeOrder[sizeIndex];
+            } else if (analysis.fit_adjustment <= -0.5 && sizeIndex > 0) {
+                sizeIndex -= 1;
+                aiCalculatedSize = sizeOrder[sizeIndex];
+            }
+
+            // Ajustar por preferencia de fit del usuario
+            sizeIndex = sizeOrder.indexOf(aiCalculatedSize);
+            if (fitPreference === 'ajustado' && sizeIndex > 0) {
+                sizeIndex -= 1;
+            } else if (fitPreference === 'holgado' && sizeIndex < sizeOrder.length - 1) {
+                sizeIndex += 1;
+            }
+            let userSize = sizeOrder[sizeIndex]; // Talla base del usuario
+
+            // Aplicar offset de la prenda (-1 = pequeña, +1 = grande)
+            // Si la prenda talla pequeña (-1), recomendar una talla más grande
+            // Si la prenda talla grande (+1), recomendar una talla más pequeña
+            let finalSizeIndex = sizeIndex - itemSizeOffset;
+            finalSizeIndex = Math.max(0, Math.min(sizeOrder.length - 1, finalSizeIndex));
+            const finalSize = sizeOrder[finalSizeIndex];
+
+            // Construir mensaje de resultado
+            let resultMessage = `Complexion: ${analysis.body_type} | Tu talla: ${userSize}`;
+            if (itemSizeOffset !== 0) {
+                const offsetLabel = itemSizeOffset === -1 ? 'talla pequeña' : 'talla grande';
+                resultMessage += ` | Prenda ${offsetLabel} → ${finalSize}`;
+            }
+            if (referenceSize && userSize !== referenceSize) {
+                resultMessage += ` (Ref: ${referenceSize})`;
+            }
+
+            setAiResult(resultMessage);
+            setReferenceSize(userSize); // Guardar la talla base del usuario
+
+            // Guardar analisis con todos los datos (talla base del usuario, no la ajustada por prenda)
             await saveSizingProfile(userId, {
-                reference_size_top: suggestedSize,
-                reference_size_bottom: suggestedSize,
+                height_cm: heightCm,
+                reference_size_top: userSize,
+                reference_size_bottom: userSize,
+                preferred_fit: fitPreference,
                 ai_body_type: analysis.body_type,
                 ai_shoulder_width: analysis.shoulder_width,
                 ai_fit_adjustment: analysis.fit_adjustment,
@@ -441,9 +536,53 @@ const ConfigureSizeModal: React.FC<ConfigureSizeModalProps> = ({
 
                     {mode === 'manual' ? (
                         <>
+                            {/* Altura */}
+                            <Text className="text-sm font-medium text-gray-700 mb-2">
+                                Tu altura
+                            </Text>
+                            <View className="flex-row items-center gap-2 mb-6">
+                                <TextInput
+                                    className="flex-1 bg-gray-100 rounded-xl px-4 py-3 text-gray-900"
+                                    placeholder="Ej: 175"
+                                    keyboardType="numeric"
+                                    value={height}
+                                    onChangeText={setHeight}
+                                    maxLength={3}
+                                />
+                                <Text className="text-gray-500">cm</Text>
+                            </View>
+
+                            {/* Preferencia de fit */}
+                            <Text className="text-sm font-medium text-gray-700 mb-2">
+                                Como te gusta que te quede la ropa?
+                            </Text>
+                            <View className="flex-row gap-2 mb-6">
+                                {[
+                                    { key: 'ajustado', label: 'Ajustada', icon: 'compress' },
+                                    { key: 'regular', label: 'Normal', icon: 'remove' },
+                                    { key: 'holgado', label: 'Holgada', icon: 'expand' },
+                                ].map((fit) => (
+                                    <TouchableOpacity
+                                        key={fit.key}
+                                        onPress={() => setFitPreference(fit.key as 'ajustado' | 'regular' | 'holgado')}
+                                        className={`flex-1 py-3 rounded-xl items-center ${fitPreference === fit.key ? '' : 'bg-gray-100'}`}
+                                        style={fitPreference === fit.key ? { backgroundColor: primaryColor } : {}}
+                                    >
+                                        <MaterialIcons
+                                            name={fit.icon as any}
+                                            size={20}
+                                            color={fitPreference === fit.key ? '#fff' : '#6b7280'}
+                                        />
+                                        <Text className={`text-xs mt-1 font-medium ${fitPreference === fit.key ? 'text-white' : 'text-gray-600'}`}>
+                                            {fit.label}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
                             {/* Medidas */}
                             <Text className="text-sm font-medium text-gray-700 mb-3">
-                                Medidas corporales (cm)
+                                Medidas corporales (cm) - opcional
                             </Text>
 
                             <View className="flex-row gap-3 mb-4">
@@ -524,33 +663,102 @@ const ConfigureSizeModal: React.FC<ConfigureSizeModalProps> = ({
                         </>
                     ) : (
                         <>
-                            {/* Modo IA */}
-                            <View className="items-center py-8">
-                                {userPhoto ? (
-                                    <View className="w-32 h-40 rounded-2xl overflow-hidden border-2 border-gray-200 mb-4">
-                                        <Image source={{ uri: userPhoto }} className="w-full h-full" resizeMode="cover" />
-                                    </View>
-                                ) : (
-                                    <View className="w-32 h-40 rounded-2xl bg-gray-100 items-center justify-center mb-4">
-                                        <MaterialIcons name="person" size={48} color="#d1d5db" />
-                                    </View>
-                                )}
-
-                                <Text className="text-center text-gray-600 mb-4 px-8">
-                                    {userPhoto
-                                        ? 'Analizaremos tu foto para determinar tu complexión y recomendarte la talla ideal.'
-                                        : 'Necesitas tener una foto de perfil para usar el análisis con IA.'}
-                                </Text>
-
-                                {aiResult && (
-                                    <View className="bg-green-50 rounded-xl p-4 mb-4 w-full">
-                                        <View className="flex-row items-center gap-2">
-                                            <MaterialIcons name="check-circle" size={20} color="#22c55e" />
-                                            <Text className="text-green-700 flex-1">{aiResult}</Text>
+                            {/* Modo IA - Foto */}
+                            <View className="items-center mb-6">
+                                <TouchableOpacity onPress={handlePickImage} activeOpacity={0.8}>
+                                    {photoToUse ? (
+                                        <View className="w-28 h-36 rounded-2xl overflow-hidden border-2 border-gray-200 mb-2">
+                                            <Image source={{ uri: photoToUse }} className="w-full h-full" resizeMode="cover" />
+                                            <View className="absolute bottom-0 left-0 right-0 bg-black/50 py-1">
+                                                <Text className="text-white text-xs text-center">Cambiar</Text>
+                                            </View>
                                         </View>
-                                    </View>
-                                )}
+                                    ) : (
+                                        <View className="w-28 h-36 rounded-2xl bg-gray-100 items-center justify-center mb-2 border-2 border-dashed border-gray-300">
+                                            <MaterialIcons name="add-photo-alternate" size={32} color="#9ca3af" />
+                                            <Text className="text-xs text-gray-400 mt-1">Subir foto</Text>
+                                        </View>
+                                    )}
+                                </TouchableOpacity>
+
+                                <TouchableOpacity onPress={handlePickImage}>
+                                    <Text className="text-sm" style={{ color: primaryColor }}>
+                                        {photoToUse ? 'Cambiar foto' : 'Seleccionar foto'}
+                                    </Text>
+                                </TouchableOpacity>
                             </View>
+
+                            {/* Altura */}
+                            <Text className="text-sm font-medium text-gray-700 mb-2">
+                                Tu altura
+                            </Text>
+                            <View className="flex-row items-center gap-2 mb-5">
+                                <TextInput
+                                    className="flex-1 bg-gray-100 rounded-xl px-4 py-3 text-gray-900"
+                                    placeholder="Ej: 175"
+                                    keyboardType="numeric"
+                                    value={height}
+                                    onChangeText={setHeight}
+                                    maxLength={3}
+                                />
+                                <Text className="text-gray-500">cm</Text>
+                            </View>
+
+                            {/* Talla de referencia */}
+                            <Text className="text-sm font-medium text-gray-700 mb-2">
+                                Tu talla habitual en Zara / H&M
+                            </Text>
+                            <View className="flex-row flex-wrap gap-2 mb-5">
+                                {REFERENCE_SIZES.map((size) => (
+                                    <TouchableOpacity
+                                        key={size}
+                                        onPress={() => setReferenceSize(size)}
+                                        className={`px-4 py-2.5 rounded-xl ${referenceSize === size ? '' : 'bg-gray-100'}`}
+                                        style={referenceSize === size ? { backgroundColor: primaryColor } : {}}
+                                    >
+                                        <Text className={`font-medium ${referenceSize === size ? 'text-white' : 'text-gray-700'}`}>
+                                            {size}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            {/* Preferencia de fit */}
+                            <Text className="text-sm font-medium text-gray-700 mb-2">
+                                Como te gusta que te quede la ropa?
+                            </Text>
+                            <View className="flex-row gap-2 mb-4">
+                                {[
+                                    { key: 'ajustado', label: 'Ajustada', icon: 'compress' },
+                                    { key: 'regular', label: 'Normal', icon: 'remove' },
+                                    { key: 'holgado', label: 'Holgada', icon: 'expand' },
+                                ].map((fit) => (
+                                    <TouchableOpacity
+                                        key={fit.key}
+                                        onPress={() => setFitPreference(fit.key as 'ajustado' | 'regular' | 'holgado')}
+                                        className={`flex-1 py-3 rounded-xl items-center ${fitPreference === fit.key ? '' : 'bg-gray-100'}`}
+                                        style={fitPreference === fit.key ? { backgroundColor: primaryColor } : {}}
+                                    >
+                                        <MaterialIcons
+                                            name={fit.icon as any}
+                                            size={20}
+                                            color={fitPreference === fit.key ? '#fff' : '#6b7280'}
+                                        />
+                                        <Text className={`text-xs mt-1 font-medium ${fitPreference === fit.key ? 'text-white' : 'text-gray-600'}`}>
+                                            {fit.label}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            {aiResult && (
+                                <View className="bg-green-50 rounded-xl p-4 mb-4 w-full">
+                                    <View className="flex-row items-center gap-2">
+                                        <MaterialIcons name="check-circle" size={20} color="#22c55e" />
+                                        <Text className="text-green-700 flex-1">{aiResult}</Text>
+                                    </View>
+                                </View>
+                            )}
                         </>
                     )}
                 </ScrollView>
@@ -573,9 +781,9 @@ const ConfigureSizeModal: React.FC<ConfigureSizeModalProps> = ({
                     ) : (
                         <TouchableOpacity
                             onPress={handleAnalyzeWithAI}
-                            disabled={analyzing || !userPhoto}
+                            disabled={analyzing || !photoToUse}
                             className="py-4 rounded-xl items-center flex-row justify-center gap-2"
-                            style={{ backgroundColor: analyzing || !userPhoto ? '#d1d5db' : primaryColor }}
+                            style={{ backgroundColor: analyzing || !photoToUse ? '#d1d5db' : primaryColor }}
                         >
                             {analyzing ? (
                                 <>

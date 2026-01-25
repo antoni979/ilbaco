@@ -26,7 +26,7 @@ export interface UserSizingProfile {
     reference_size_top?: string;
     reference_size_bottom?: string;
     reference_size_shoes?: string;
-    preferred_fit: 'slim' | 'regular' | 'loose';
+    preferred_fit: 'ajustado' | 'regular' | 'holgado';
     // Medidas manuales
     chest_cm?: number;
     waist_cm?: number;
@@ -58,8 +58,8 @@ export interface SizeRecommendation {
 const ANALYSIS_MODEL = 'gemini-2.0-flash-exp';
 const ANALYSIS_TIMEOUT = 20000; // 20 segundos
 
-// Prompt estructurado para análisis de sizing
-const SIZING_ANALYSIS_PROMPT = `
+// Prompt base estructurado para análisis de sizing
+const SIZING_ANALYSIS_PROMPT_BASE = `
 Analiza esta foto de una persona para determinar su perfil de tallas.
 Eres un experto en moda y patronaje con años de experiencia.
 
@@ -119,10 +119,32 @@ CRITERIOS DE ANÁLISIS:
 3. Si tiene hombros muy anchos -> considerar +0.5 para tops
 4. Si el torso es largo -> notar en build_notes (afecta largo de camisas)
 5. Analiza objetivamente sin juzgar la apariencia
+`;
 
+// Función para generar el prompt con altura si está disponible
+const buildSizingPrompt = (heightCm?: number): string => {
+    let prompt = SIZING_ANALYSIS_PROMPT_BASE;
+
+    if (heightCm && heightCm > 0) {
+        prompt += `
+INFORMACIÓN ADICIONAL DEL USUARIO:
+- Altura: ${heightCm} cm
+
+USA ESTA ALTURA para calibrar mejor tu análisis:
+- Si mide menos de 165cm, es probable que necesite tallas más pequeñas
+- Si mide entre 165-180cm, usar rangos estándar
+- Si mide más de 180cm, considerar que puede necesitar tallas más largas (especialmente en torso)
+- Combina la altura con lo que ves en la foto para un análisis más preciso
+`;
+    }
+
+    prompt += `
 EJEMPLO DE RESPUESTA:
 {"body_type":"medio","shoulder_width":"medio","torso_length":"medio","build_notes":"Constitución promedio, proporciones equilibradas. Sin características especiales que requieran ajuste.","fit_adjustment":0,"confidence":0.85}
 `;
+
+    return prompt;
+};
 
 // Análisis por defecto si falla la IA
 const DEFAULT_ANALYSIS: SizingAnalysisResult = {
@@ -209,9 +231,12 @@ const validateAnalysisResult = (result: any): SizingAnalysisResult => {
 
 /**
  * Analiza la foto del usuario con Gemini para determinar su perfil de tallas
+ * @param base64Image - Imagen en base64
+ * @param heightCm - Altura del usuario en cm (opcional, mejora la precision)
  */
 export const analyzeSizingFromPhoto = async (
-    base64Image: string
+    base64Image: string,
+    heightCm?: number
 ): Promise<SizingAnalysisResult> => {
     const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
 
@@ -221,12 +246,15 @@ export const analyzeSizingFromPhoto = async (
     }
 
     try {
-        console.log('[SizingAnalysis] Iniciando análisis de sizing...');
+        console.log('[SizingAnalysis] Iniciando análisis de sizing...', heightCm ? `(altura: ${heightCm}cm)` : '');
 
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${ANALYSIS_MODEL}:generateContent?key=${apiKey}`;
 
         // Limpiar base64 de prefijos
         const cleanBase64 = base64Image.replace(/^data:image\/\w+;base64,/, '');
+
+        // Generar prompt con altura si está disponible
+        const prompt = buildSizingPrompt(heightCm);
 
         const response = await fetchWithTimeout(
             url,
@@ -239,7 +267,7 @@ export const analyzeSizingFromPhoto = async (
                     contents: [
                         {
                             parts: [
-                                { text: SIZING_ANALYSIS_PROMPT },
+                                { text: prompt },
                                 {
                                     inline_data: {
                                         mime_type: 'image/jpeg',
