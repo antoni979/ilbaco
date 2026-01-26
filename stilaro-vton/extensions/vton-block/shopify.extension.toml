@@ -1,0 +1,16 @@
+api_version = "2024-01"
+
+[[extensions]]
+name = "Probador Virtual"
+handle = "vton-block"
+
+uid = "d03e557b-6a90-a35e-3845-3d9c72f5e0491e8f3f28"
+
+type = "theme"
+
+[extensions.capabilities]
+block_progress = false
+
+[[extensions.targeting]]
+target = "section"
+module = "./blocks/vton-button.liquid"

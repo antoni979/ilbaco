@@ -1,0 +1,14 @@
+{
+  "name": "Virtual Try-On",
+  "settings": {
+    "button_text": {
+      "label": "Button text"
+    },
+    "button_bg_color": {
+      "label": "Background color"
+    },
+    "button_text_color": {
+      "label": "Text color"
+    }
+  }
+}
