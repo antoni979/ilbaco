@@ -8,7 +8,9 @@
       "Bash(npx expo start:*)",
       "Bash(ls:*)",
       "mcp__supabase__apply_migration",
-      "mcp__supabase__list_tables"
+      "mcp__supabase__list_tables",
+      "Bash(node -e:*)",
+      "Bash(node --check:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

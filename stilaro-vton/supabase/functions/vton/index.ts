@@ -17,11 +17,18 @@ serve(async (req) => {
   }
 
   try {
-    const { userPhoto, productId, productImage, shopDomain, visitorId } = await req.json();
+    const { userPhoto, productId, productImage, productImages, outfitMode, shopDomain, visitorId } = await req.json();
 
-    if (!userPhoto || !productImage) {
-      throw new Error('Faltan imagenes (userPhoto o productImage)');
+    // productImages es un array de URLs para outfit mode
+    // productImage es para compatibilidad con el modo single
+    const garmentImages = productImages && productImages.length > 0 ? productImages : [productImage];
+
+    if (!userPhoto || garmentImages.length === 0 || !garmentImages[0]) {
+      throw new Error('Faltan imagenes (userPhoto o productImage/productImages)');
     }
+
+    const isOutfitMode = outfitMode === true || garmentImages.length > 1;
+    console.log(`[VTON] Modo: ${isOutfitMode ? 'OUTFIT (' + garmentImages.length + ' prendas)' : 'SINGLE'}`);
 
     if (!shopDomain) {
       throw new Error('Falta shopDomain');
@@ -112,27 +119,54 @@ serve(async (req) => {
       return base64;
     };
 
-    // Procesar productImage: si es URL, descargar; si es base64, limpiar
-    let productImageBase64: string;
-    if (productImage.startsWith('http') || productImage.startsWith('//') || productImage.startsWith('/')) {
-      productImageBase64 = await urlToBase64(productImage);
-    } else {
-      productImageBase64 = cleanBase64(productImage);
+    // Procesar todas las imágenes de prendas
+    const processedGarments: string[] = [];
+    for (let i = 0; i < garmentImages.length; i++) {
+      const img = garmentImages[i];
+      let base64: string;
+
+      if (img.startsWith('http') || img.startsWith('//') || img.startsWith('/')) {
+        base64 = await urlToBase64(img);
+      } else {
+        base64 = cleanBase64(img);
+      }
+
+      processedGarments.push(base64);
+      console.log(`[VTON] Prenda ${i + 1} base64 length: ${base64.length}`);
     }
 
     // userPhoto siempre deberia ser base64
     const userPhotoBase64 = cleanBase64(userPhoto);
 
     console.log(`[VTON] userPhoto base64 length: ${userPhotoBase64.length}`);
-    console.log(`[VTON] productImage base64 length: ${productImageBase64.length}`);
+    console.log(`[VTON] Total prendas procesadas: ${processedGarments.length}`);
 
     // ========================================
-    // Usar Gemini 2.5 Flash Image (modelo de produccion)
+    // Usar Gemini 3 Pro Image (modelo de produccion)
     // ========================================
     const model = 'gemini-3-pro-image-preview';
 
-    // Prompt para el probador virtual
-    const prompt = `Generate a photorealistic image of the EXACT same person from the reference photo wearing the clothing item shown.
+    // Prompt diferente según si es una prenda o outfit completo
+    let prompt: string;
+
+    if (isOutfitMode && processedGarments.length > 1) {
+      // Prompt para outfit completo (múltiples prendas)
+      prompt = `Generate a photorealistic image of the EXACT same person from the first reference photo wearing ALL the clothing items shown in the following ${processedGarments.length} images as a complete outfit.
+
+CRITICAL REQUIREMENTS:
+- Keep the EXACT same person: same face, same body type, same skin tone, same hair
+- The person must be wearing ALL garments shown: combine them into one cohesive outfit
+- Layer the clothes appropriately (e.g., coat/jacket over shirt, pants/skirt on bottom, shoes on feet)
+- Full body visible, natural pose
+- Professional fashion photography style
+- Realistic fabric draping and fit for EACH garment
+- Clean background
+- The outfit should look natural and coordinated
+
+The person in the output must be identical to the person in the reference - only their clothing changes to show the complete outfit with all garments.`;
+    } else {
+      // Prompt original para una sola prenda
+      prompt = `Generate a photorealistic image of the EXACT same person from the reference photo wearing the clothing item shown.
 
 CRITICAL REQUIREMENTS:
 - Keep the EXACT same person: same face, same body type, same skin tone, same hair
@@ -143,25 +177,31 @@ CRITICAL REQUIREMENTS:
 - Clean background
 
 The person in the output must be identical to the person in the reference - only their clothing changes.`;
+    }
+
+    // Construir parts con todas las imágenes
+    const parts: any[] = [
+      { text: prompt },
+      {
+        inline_data: {
+          mime_type: "image/jpeg",
+          data: userPhotoBase64
+        }
+      }
+    ];
+
+    // Agregar cada prenda como imagen separada
+    for (const garmentBase64 of processedGarments) {
+      parts.push({
+        inline_data: {
+          mime_type: "image/jpeg",
+          data: garmentBase64
+        }
+      });
+    }
 
     const requestBody = {
-      contents: [{
-        parts: [
-          { text: prompt },
-          {
-            inline_data: {
-              mime_type: "image/jpeg",
-              data: userPhotoBase64
-            }
-          },
-          {
-            inline_data: {
-              mime_type: "image/jpeg",
-              data: productImageBase64
-            }
-          }
-        ]
-      }],
+      contents: [{ parts }],
       generationConfig: {
         responseModalities: ["IMAGE", "TEXT"],
         temperature: 0.4,

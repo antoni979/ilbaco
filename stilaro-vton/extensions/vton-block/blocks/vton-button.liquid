@@ -10,6 +10,7 @@
     data-product-title="{{ product.title | escape }}"
     data-product-image="{{ product.featured_image | image_url: width: 800 }}"
     data-product-price="{{ product.price | money }}"
+    data-product-type="{{ product.type }}"
     style="
       background-color: {{ block.settings.button_bg_color }};
       color: {{ block.settings.button_text_color }};
@@ -38,6 +39,12 @@
     <div class="stilaro-vton-header">
       <h2>{{ block.settings.modal_title }}</h2>
       <p>{{ block.settings.modal_subtitle }}</p>
+    </div>
+
+    <!-- Pestañas -->
+    <div class="stilaro-vton-tabs">
+      <button class="stilaro-tab active" data-tab="single">Probar prenda</button>
+      <button class="stilaro-tab" data-tab="outfit">Completar look</button>
     </div>
 
     <div class="stilaro-vton-body">
@@ -96,41 +103,161 @@
         </div>
         <p class="stilaro-progress-text" id="stilaro-progress-text">0%</p>
       </div>
+
+      <!-- ==================== -->
+      <!-- TAB 2: COMPLETAR LOOK -->
+      <!-- ==================== -->
+
+      <!-- Paso Outfit: Subir foto (después de seleccionar prendas) -->
+      <div class="stilaro-vton-step stilaro-outfit-step" id="stilaro-outfit-upload" style="display: none;">
+        <div class="stilaro-outfit-selected-summary" id="stilaro-outfit-selected-summary">
+          <p><strong>Tu outfit seleccionado:</strong></p>
+          <div class="outfit-preview" id="stilaro-outfit-upload-preview"></div>
+        </div>
+
+        <div class="stilaro-vton-upload-area" id="stilaro-outfit-upload-area">
+          <input type="file" id="stilaro-outfit-photo-input" accept="image/*" style="display: none;">
+          <div class="stilaro-vton-upload-content">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <p>Sube tu foto para probarte el outfit</p>
+            <span>JPG, PNG (max 5MB)</span>
+          </div>
+        </div>
+
+        <img id="stilaro-outfit-user-preview" src="" alt="Tu foto" style="display: none;">
+
+        <!-- Hidden, VTON se genera automáticamente después de subir foto -->
+        <button id="stilaro-outfit-continue-btn" class="stilaro-vton-primary-btn" style="display: none;">
+          Generar
+        </button>
+      </div>
+
+      <!-- Paso 2 Outfit: Recomendaciones -->
+      <div class="stilaro-vton-step stilaro-outfit-step" id="stilaro-outfit-recommendations" style="display: none;">
+        <div class="stilaro-outfit-summary" id="stilaro-outfit-summary">
+          <strong>Tu outfit:</strong>
+          <div class="outfit-preview" id="stilaro-outfit-preview"></div>
+        </div>
+
+        <div class="stilaro-recommendations-header">
+          <h3>Completa tu look</h3>
+          <p>Selecciona prendas que combinen</p>
+        </div>
+
+        <div class="stilaro-recommendations-grid" id="stilaro-recommendations-grid">
+          <p class="stilaro-loading-text">Buscando prendas que combinen...</p>
+        </div>
+
+        <div class="stilaro-recommendations-actions">
+          <button id="stilaro-skip-btn" class="stilaro-vton-secondary-btn">Solo esta prenda</button>
+          <button id="stilaro-outfit-tryon-btn" class="stilaro-vton-primary-btn">Probar outfit</button>
+        </div>
+      </div>
+
+      <!-- Paso 3 Outfit: Loading -->
+      <div class="stilaro-vton-step stilaro-outfit-step" id="stilaro-outfit-loading" style="display: none;">
+        <div class="stilaro-vton-spinner"></div>
+        <p>Generando tu look completo...</p>
+        <div class="stilaro-progress-bar">
+          <div class="stilaro-progress-fill" id="stilaro-outfit-progress-fill"></div>
+        </div>
+        <p class="stilaro-progress-text" id="stilaro-outfit-progress-text">0%</p>
+      </div>
+
+      <!-- Paso 4 Outfit: Resultado -->
+      <div class="stilaro-vton-step stilaro-outfit-step" id="stilaro-outfit-result" style="display: none;">
+        <div class="stilaro-vton-result">
+          <img id="stilaro-outfit-result-image" src="" alt="Resultado">
+        </div>
+        <div class="stilaro-outfit-items-list" id="stilaro-outfit-items-list"></div>
+        <div class="stilaro-vton-actions">
+          <button id="stilaro-outfit-download-btn" class="stilaro-vton-secondary-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Descargar
+          </button>
+          <button id="stilaro-outfit-retry-btn" class="stilaro-vton-secondary-btn">Cambiar look</button>
+          <button id="stilaro-outfit-addall-btn" class="stilaro-vton-primary-btn">Añadir todo al carrito</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
 <style>
+  .stilaro-vton-container {
+    max-width: none !important;
+  }
+
   .stilaro-vton-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 9999;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 999999 !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   .stilaro-vton-modal-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.7);
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: rgba(0, 0, 0, 0.7) !important;
   }
 
   .stilaro-vton-modal-content {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: white;
-    border-radius: 16px;
-    width: 90%;
-    max-width: 500px;
-    max-height: 90vh;
-    overflow-y: auto;
-    padding: 24px;
+    position: fixed !important;
+    top: 40% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    background: white !important;
+    border-radius: 16px !important;
+    width: 90vw !important;
+    max-width: 480px !important;
+    max-height: 75vh !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 24px !important;
+    scrollbar-width: thin;
+    scrollbar-color: #ccc transparent;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    transition: max-width 0.3s ease;
+  }
+
+  /* Modal más ancho para modo outfit */
+  .stilaro-vton-modal.outfit-mode .stilaro-vton-modal-content {
+    max-width: 580px !important;
+    max-height: 70vh !important;
+  }
+
+  .stilaro-vton-modal-content::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .stilaro-vton-modal-content::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .stilaro-vton-modal-content::-webkit-scrollbar-thumb {
+    background-color: #ccc;
+    border-radius: 3px;
   }
 
   .stilaro-vton-close {
@@ -146,7 +273,7 @@
 
   .stilaro-vton-header {
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
   }
 
   .stilaro-vton-header h2 {
@@ -306,6 +433,273 @@
 
   .stilaro-vton-actions .stilaro-vton-primary-btn {
     grid-column: 3;
+  }
+
+  .stilaro-vton-body {
+    min-height: 200px;
+  }
+
+  /* ==================== */
+  /* TABS */
+  /* ==================== */
+  .stilaro-vton-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 24px;
+    border-bottom: 2px solid #eee;
+  }
+
+  .stilaro-tab {
+    flex: 1;
+    padding: 12px 16px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .stilaro-tab:hover {
+    color: #333;
+  }
+
+  .stilaro-tab.active {
+    color: {{ block.settings.button_bg_color }};
+    border-bottom-color: {{ block.settings.button_bg_color }};
+  }
+
+  /* ==================== */
+  /* OUTFIT TAB STYLES */
+  /* ==================== */
+  #stilaro-outfit-user-preview {
+    width: 100%;
+    max-height: 250px;
+    object-fit: contain;
+    border-radius: 8px;
+    margin-bottom: 16px;
+  }
+
+  .stilaro-outfit-summary {
+    background: #f8f8f8;
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  .stilaro-outfit-summary strong {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 14px;
+    color: #555;
+  }
+
+  .outfit-preview {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .outfit-preview img {
+    width: 55px;
+    height: 72px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 2px solid {{ block.settings.button_bg_color }};
+  }
+
+  .stilaro-recommendations-header {
+    text-align: center;
+    margin-bottom: 16px;
+  }
+
+  .stilaro-recommendations-header h3 {
+    margin: 0 0 6px 0;
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  .stilaro-recommendations-header p {
+    margin: 0;
+    color: #666;
+    font-size: 14px;
+  }
+
+  .stilaro-recommendations-grid {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 16px;
+    padding-right: 4px;
+  }
+
+  .stilaro-loading-text {
+    text-align: center;
+    color: #666;
+    padding: 20px;
+  }
+
+  .stilaro-recommendation-category {
+    margin-bottom: 20px;
+  }
+
+  .stilaro-recommendation-category h4 {
+    margin: 0 0 10px 0;
+    font-size: 13px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  .stilaro-recommendation-items {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 10px;
+    justify-content: center;
+  }
+
+  .stilaro-recommendation-item {
+    flex: 0 0 100px;
+    cursor: pointer;
+    border: 2px solid #eee;
+    border-radius: 8px;
+    padding: 6px;
+    transition: all 0.2s ease;
+    position: relative;
+    background: white;
+  }
+
+  .stilaro-recommendation-item:hover {
+    border-color: #ccc;
+  }
+
+  .stilaro-recommendation-item.selected {
+    border-color: {{ block.settings.button_bg_color }};
+    background: rgba(0,0,0,0.02);
+  }
+
+  .stilaro-recommendation-item img {
+    width: 100%;
+    aspect-ratio: 3/4;
+    object-fit: cover;
+    border-radius: 4px;
+  }
+
+  .stilaro-recommendation-item .item-title {
+    display: block;
+    font-size: 10px;
+    margin-top: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #333;
+  }
+
+  .stilaro-recommendation-item .item-score {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    background: {{ block.settings.button_bg_color }};
+    color: {{ block.settings.button_text_color }};
+    font-size: 9px;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-weight: 600;
+  }
+
+  .stilaro-recommendation-item .item-check {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 20px;
+    height: 20px;
+    background: {{ block.settings.button_bg_color }};
+    color: {{ block.settings.button_text_color }};
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+  }
+
+  .stilaro-recommendation-item.selected .item-check {
+    display: flex;
+  }
+
+  .stilaro-recommendations-actions {
+    display: flex;
+    gap: 12px;
+    padding: 16px 0 0 0;
+    border-top: 1px solid #eee;
+    background: white;
+    position: sticky;
+    bottom: -32px;
+    margin: 0 -32px -32px -32px;
+    padding: 16px 32px 20px 32px;
+  }
+
+  .stilaro-recommendations-actions .stilaro-vton-primary-btn {
+    flex: 1;
+  }
+
+  .stilaro-outfit-items-list {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .stilaro-outfit-items-list .outfit-item {
+    text-align: center;
+    font-size: 11px;
+    color: #666;
+  }
+
+  .stilaro-outfit-items-list .outfit-item img {
+    width: 45px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .stilaro-outfit-selected-summary {
+    background: #f8f8f8;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+
+  .stilaro-outfit-selected-summary p {
+    margin: 0 0 8px 0;
+    font-size: 13px;
+    color: #666;
+  }
+
+  #stilaro-outfit-upload-preview {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  #stilaro-outfit-upload-preview img {
+    width: 50px;
+    height: 65px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 2px solid {{ block.settings.button_bg_color }};
   }
 </style>
 
