@@ -642,8 +642,74 @@
     renderRecommendations(recommendations);
   }
 
+  function getRecommendationText(product, currentColor) {
+    const productColor = product.color || FashionEngine.extractColor(product);
+    const score = product.colorScore || 0;
+
+    if (score >= 90) {
+      return `Combinación perfecta`;
+    } else if (score >= 80) {
+      return `Muy buen match`;
+    } else if (FashionEngine.NEUTRAL_COLORS.includes(productColor)) {
+      return `Color neutro, versátil`;
+    } else if (FashionEngine.NEUTRAL_COLORS.includes(currentColor)) {
+      return `Añade un toque de color`;
+    } else {
+      return `Combina bien`;
+    }
+  }
+
+  function getStyleAnalysis(product) {
+    const color = FashionEngine.extractColor(product);
+    const type = product.product_type || '';
+    const outfitType = FashionEngine.CATEGORY_MAP[type];
+
+    const colorCapitalized = color.charAt(0).toUpperCase() + color.slice(1);
+    const isNeutral = FashionEngine.NEUTRAL_COLORS.includes(color);
+    const harmonies = FashionEngine.COLOR_HARMONIES[color] || [];
+
+    let analysis = '';
+
+    // Análisis según tipo de prenda
+    if (outfitType === 'TOP') {
+      if (isNeutral) {
+        analysis = `Este ${type.toLowerCase()} en ${color} es muy versátil. Combina con prácticamente cualquier pantalón y puedes añadir un abrigo para completar el look.`;
+      } else {
+        const suggestedColors = harmonies.slice(0, 2).join(' o ');
+        analysis = `El ${color} de esta prenda destaca mejor con tonos ${suggestedColors}. Te recomendamos pantalones neutros para equilibrar el look.`;
+      }
+    } else if (outfitType === 'OUTERWEAR') {
+      if (isNeutral) {
+        analysis = `Un abrigo ${color} es un básico que combina con todo. Ideal para dar un toque elegante a cualquier conjunto.`;
+      } else {
+        analysis = `Este abrigo en ${color} será el protagonista del look. Combínalo con prendas en tonos neutros para un resultado sofisticado.`;
+      }
+    } else if (outfitType === 'BOTTOM') {
+      if (isNeutral) {
+        analysis = `Pantalón ${color}, una base perfecta. Puedes combinarlo con tops de cualquier color y añadir capas según la ocasión.`;
+      } else {
+        analysis = `Un pantalón en ${color} aporta personalidad. Equilibra con partes de arriba en tonos más suaves.`;
+      }
+    } else if (outfitType === 'DRESS') {
+      analysis = `Este vestido en ${color} es una pieza statement. Solo necesitas un buen abrigo y calzado para completar el look.`;
+    } else if (outfitType === 'SHOES') {
+      if (isNeutral) {
+        analysis = `Calzado ${color}, siempre acertado. Combina con cualquier outfit sin competir con el resto de prendas.`;
+      } else {
+        analysis = `Zapatos en ${color} para dar un toque de color. Mejor con ropa en tonos neutros.`;
+      }
+    } else {
+      analysis = `Prenda en ${color}. Te mostramos opciones que combinan bien con este tono.`;
+    }
+
+    return analysis;
+  }
+
   function renderRecommendations(recommendations) {
-    let html = '';
+    const currentColor = FashionEngine.extractColor(currentProduct);
+    const analysis = getStyleAnalysis(currentProduct);
+
+    let html = `<div class="stilaro-style-analysis">${analysis}</div>`;
 
     Object.entries(recommendations).forEach(([category, products]) => {
       if (products.length === 0) return;
@@ -662,6 +728,7 @@
                    onclick="window.toggleOutfitItem(this)">
                 <img src="${p.images[0]?.src || ''}" alt="${p.title}">
                 <span class="item-title">${p.title.substring(0, 20)}${p.title.length > 20 ? '...' : ''}</span>
+                <span class="item-reason">${getRecommendationText(p, currentColor)}</span>
                 ${p.colorScore >= 80 ? `<span class="item-score">${p.colorScore}%</span>` : ''}
                 <span class="item-check">✓</span>
               </div>
