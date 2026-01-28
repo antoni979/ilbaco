@@ -65,36 +65,113 @@
       'ACCESSORY': []
     },
 
-    // Colores neutros
+    // Colores neutros (combinan con casi todo)
     NEUTRAL_COLORS: [
-      'negro', 'blanco', 'gris', 'beige', 'crema', 'azul marino',
+      'negro', 'blanco', 'gris', 'beige', 'crema',
       'camel', 'marron', 'marrón', 'piedra', 'natural', 'nude'
     ],
 
-    // Combinaciones clásicas
+    // Combinaciones que funcionan bien (basadas en teoría del color)
     COLOR_HARMONIES: {
-      'negro': ['blanco', 'gris', 'rojo', 'beige', 'crema', 'dorado', 'azul'],
-      'blanco': ['negro', 'azul', 'azul marino', 'beige', 'rosa', 'rojo'],
-      'azul marino': ['blanco', 'beige', 'crema', 'rojo', 'rosa'],
-      'azul': ['blanco', 'beige', 'gris', 'marron', 'camel'],
-      'gris': ['rosa', 'negro', 'blanco', 'azul', 'rojo', 'amarillo'],
-      'beige': ['blanco', 'azul marino', 'marron', 'negro', 'verde', 'azul'],
-      'rojo': ['negro', 'blanco', 'azul marino', 'gris', 'beige'],
-      'verde': ['beige', 'marron', 'crema', 'blanco', 'negro'],
-      'rosa': ['gris', 'blanco', 'negro', 'azul marino'],
-      'marron': ['beige', 'crema', 'verde', 'azul', 'blanco'],
+      'negro': ['blanco', 'gris', 'rojo', 'beige', 'crema', 'camel', 'rosa', 'amarillo'],
+      'blanco': ['negro', 'azul', 'azul marino', 'beige', 'rosa', 'rojo', 'verde', 'naranja'],
+      'azul marino': ['blanco', 'beige', 'crema', 'rojo', 'camel', 'rosa'],
+      'azul': ['blanco', 'beige', 'naranja', 'camel', 'marron'],
+      'gris': ['rosa', 'negro', 'blanco', 'azul', 'rojo', 'burdeos', 'amarillo'],
+      'beige': ['blanco', 'azul marino', 'marron', 'verde', 'azul'],
+      'rojo': ['negro', 'blanco', 'azul marino', 'gris'],
+      'verde': ['beige', 'marron', 'crema', 'blanco'],
+      'rosa': ['gris', 'blanco', 'negro', 'azul marino', 'beige'],
+      'marron': ['beige', 'crema', 'verde', 'blanco', 'naranja', 'rosa'],
       'camel': ['negro', 'blanco', 'azul marino', 'beige', 'burdeos'],
-      'burdeos': ['beige', 'negro', 'gris', 'crema', 'camel'],
-      'vino': ['beige', 'negro', 'gris', 'crema']
+      'burdeos': ['beige', 'camel', 'gris', 'crema'],
+      'vino': ['beige', 'gris', 'crema', 'camel'],
+      'naranja': ['azul', 'blanco', 'beige', 'marron'],
+      'amarillo': ['gris', 'azul marino', 'negro', 'blanco']
     },
 
-    // Colores que chocan
+    // Combinaciones a EVITAR (chocan visualmente)
     COLOR_CLASHES: [
       ['rojo', 'naranja'],
       ['rojo', 'rosa'],
-      ['verde', 'rojo'],
-      ['naranja', 'rosa']
+      ['rojo', 'verde'],
+      ['verde', 'rosa'],
+      ['verde', 'azul'],
+      ['naranja', 'rosa'],
+      ['naranja', 'amarillo'],
+      ['negro', 'marron'],
+      ['negro', 'azul marino'],
+      ['gris', 'marron']
     ],
+
+    // Tips por color (basados en reglas de estilismo)
+    COLOR_TIPS: {
+      'azul marino': {
+        good: 'tonos tierra o blanco',
+        bad: 'negro',
+        tip: 'El azul marino pide tonos tierra o blanco. El negro lo apaga, no hay contraste.'
+      },
+      'negro': {
+        good: 'contraste con blanco, gris o colores vivos',
+        bad: 'marrón o azul marino',
+        tip: 'El negro pide contraste. Con marrón o azul marino se pierde todo.'
+      },
+      'blanco': {
+        good: 'casi todo',
+        bad: 'crema o beige muy claro',
+        tip: 'El blanco es comodín. Evita tonos muy similares que parezcan manchas.'
+      },
+      'gris': {
+        good: 'rosa, azul o burdeos',
+        bad: 'marrón',
+        tip: 'El gris combina con casi todo menos marrón. Rosa o burdeos le dan vida.'
+      },
+      'beige': {
+        good: 'azul marino, blanco o verde',
+        bad: 'amarillo o naranja',
+        tip: 'Los tonos tierra se llevan bien entre sí. Azul marino es su mejor aliado.'
+      },
+      'camel': {
+        good: 'azul marino, blanco o burdeos',
+        bad: 'amarillo o naranja',
+        tip: 'El camel es elegante con azul marino o burdeos. Evita tonos cálidos similares.'
+      },
+      'rojo': {
+        good: 'negro, blanco o gris',
+        bad: 'naranja, rosa o verde',
+        tip: 'El rojo es protagonista. Solo con neutros. Naranja y rosa compiten, verde es Navidad.'
+      },
+      'verde': {
+        good: 'beige, marrón o blanco',
+        bad: 'rojo, rosa o azul',
+        tip: 'El verde es difícil. Apuesta por tonos tierra y neutros claros.'
+      },
+      'rosa': {
+        good: 'gris, blanco o azul marino',
+        bad: 'rojo, verde o naranja',
+        tip: 'El rosa se suaviza con grises y neutros. Lejos del verde y el rojo.'
+      },
+      'marron': {
+        good: 'beige, blanco o verde',
+        bad: 'negro o gris',
+        tip: 'El marrón pide tonos claros. Negro y gris lo ensombrecen.'
+      },
+      'naranja': {
+        good: 'azul, blanco o beige',
+        bad: 'rojo, rosa o amarillo',
+        tip: 'Naranja + azul es combo ganador. Evita tonos cálidos similares.'
+      },
+      'burdeos': {
+        good: 'beige, camel o gris',
+        bad: 'rojo o marrón oscuro',
+        tip: 'El burdeos es elegante con camel o gris. Evita rojos, compiten.'
+      },
+      'amarillo': {
+        good: 'gris, azul marino o blanco',
+        bad: 'naranja o rojo',
+        tip: 'El amarillo alegra con grises o azul marino. Nada de naranjas.'
+      }
+    },
 
     extractColor(product) {
       // tags puede ser string o array dependiendo de la API
@@ -197,7 +274,6 @@
 
   // Elementos DOM
   const modal = document.getElementById('stilaro-vton-modal');
-  const overlay = modal?.querySelector('.stilaro-vton-modal-overlay');
   const closeBtn = modal?.querySelector('.stilaro-vton-close');
   const uploadArea = document.getElementById('stilaro-upload-area');
   const photoInput = document.getElementById('stilaro-photo-input');
@@ -434,9 +510,8 @@
       btn.addEventListener('click', openModal);
     });
 
-    // Cerrar modal
+    // Cerrar modal (solo con botón X, overlay permite interactuar con la página)
     closeBtn?.addEventListener('click', closeModal);
-    overlay?.addEventListener('click', closeModal);
 
     // Upload (Tab 1)
     uploadArea?.addEventListener('click', (e) => {
@@ -661,48 +736,29 @@
 
   function getStyleAnalysis(product) {
     const color = FashionEngine.extractColor(product);
-    const type = product.product_type || '';
-    const outfitType = FashionEngine.CATEGORY_MAP[type];
 
-    const colorCapitalized = color.charAt(0).toUpperCase() + color.slice(1);
-    const isNeutral = FashionEngine.NEUTRAL_COLORS.includes(color);
-    const harmonies = FashionEngine.COLOR_HARMONIES[color] || [];
+    // Buscar tip específico para este color
+    const colorTip = FashionEngine.COLOR_TIPS[color];
 
-    let analysis = '';
-
-    // Análisis según tipo de prenda
-    if (outfitType === 'TOP') {
-      if (isNeutral) {
-        analysis = `Este ${type.toLowerCase()} en ${color} es muy versátil. Combina con prácticamente cualquier pantalón y puedes añadir un abrigo para completar el look.`;
-      } else {
-        const suggestedColors = harmonies.slice(0, 2).join(' o ');
-        analysis = `El ${color} de esta prenda destaca mejor con tonos ${suggestedColors}. Te recomendamos pantalones neutros para equilibrar el look.`;
-      }
-    } else if (outfitType === 'OUTERWEAR') {
-      if (isNeutral) {
-        analysis = `Un abrigo ${color} es un básico que combina con todo. Ideal para dar un toque elegante a cualquier conjunto.`;
-      } else {
-        analysis = `Este abrigo en ${color} será el protagonista del look. Combínalo con prendas en tonos neutros para un resultado sofisticado.`;
-      }
-    } else if (outfitType === 'BOTTOM') {
-      if (isNeutral) {
-        analysis = `Pantalón ${color}, una base perfecta. Puedes combinarlo con tops de cualquier color y añadir capas según la ocasión.`;
-      } else {
-        analysis = `Un pantalón en ${color} aporta personalidad. Equilibra con partes de arriba en tonos más suaves.`;
-      }
-    } else if (outfitType === 'DRESS') {
-      analysis = `Este vestido en ${color} es una pieza statement. Solo necesitas un buen abrigo y calzado para completar el look.`;
-    } else if (outfitType === 'SHOES') {
-      if (isNeutral) {
-        analysis = `Calzado ${color}, siempre acertado. Combina con cualquier outfit sin competir con el resto de prendas.`;
-      } else {
-        analysis = `Zapatos en ${color} para dar un toque de color. Mejor con ropa en tonos neutros.`;
-      }
-    } else {
-      analysis = `Prenda en ${color}. Te mostramos opciones que combinan bien con este tono.`;
+    if (colorTip) {
+      return colorTip.tip;
     }
 
-    return analysis;
+    // Si no hay tip específico, usar uno genérico basado en si es neutro o no
+    const isNeutral = FashionEngine.NEUTRAL_COLORS.includes(color);
+
+    if (isNeutral) {
+      return `El ${color} es un color neutro muy versátil. Combínalo con colores vivos para dar vida al look.`;
+    }
+
+    // Buscar colores que combinan bien
+    const harmonies = FashionEngine.COLOR_HARMONIES[color];
+    if (harmonies && harmonies.length > 0) {
+      const suggestions = harmonies.slice(0, 3).join(', ');
+      return `El ${color} combina especialmente bien con ${suggestions}.`;
+    }
+
+    return `Combina esta prenda con tonos neutros para un look equilibrado.`;
   }
 
   function renderRecommendations(recommendations) {
@@ -1020,9 +1076,8 @@
     currentTab = 'single';
     tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === 'single'));
 
-    // Mostrar modal
+    // Mostrar modal (sin bloquear scroll de la página)
     if (modal) modal.style.display = 'block';
-    document.body.style.overflow = 'hidden';
 
     // Ocultar todos los steps excepto el de upload tab 1
     [stepResult, stepLoading, outfitUpload, outfitRecommendations, outfitLoading, outfitResult]
@@ -1043,7 +1098,6 @@
 
   function closeModal() {
     if (modal) modal.style.display = 'none';
-    document.body.style.overflow = '';
     userPhotoBase64 = null;
     shopStatus = null;
   }
