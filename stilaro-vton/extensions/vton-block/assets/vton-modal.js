@@ -31,28 +31,118 @@
   // MOTOR DE RECOMENDACIONES DE MODA
   // ========================================
   const FashionEngine = {
-    // Mapeo de categorías a tipo de outfit
-    CATEGORY_MAP: {
-      'Abrigo': 'OUTERWEAR',
-      'Abrigos': 'OUTERWEAR',
-      'Chaqueta': 'OUTERWEAR',
-      'Chaquetas': 'OUTERWEAR',
-      'Jersey': 'TOP',
-      'Jerseys': 'TOP',
-      'Blusa': 'TOP',
-      'Blusas y Tops': 'TOP',
-      'Camiseta': 'TOP',
-      'Camisa': 'TOP',
-      'Sudadera': 'TOP',
-      'Top': 'TOP',
-      'Pantalón': 'BOTTOM',
-      'Pantalones': 'BOTTOM',
-      'Falda': 'BOTTOM',
-      'Shorts': 'BOTTOM',
-      'Calzado': 'SHOES',
-      'Vestido': 'DRESS',
-      'Vestidos': 'DRESS',
-      'Accesorios': 'ACCESSORY'
+    // Palabras clave multilíngue para detectar tipo de prenda
+    // Formato: array de keywords que mapean a cada tipo
+    CATEGORY_KEYWORDS: {
+      'OUTERWEAR': [
+        // Español
+        'abrigo', 'abrigos', 'chaqueta', 'chaquetas', 'cazadora', 'parka', 'gabardina', 'blazer', 'americana',
+        // English
+        'coat', 'coats', 'jacket', 'jackets', 'outerwear', 'parka', 'blazer', 'cardigan', 'overcoat',
+        // Français
+        'manteau', 'veste', 'blouson', 'pardessus',
+        // Deutsch
+        'mantel', 'jacke', 'jacken', 'blazer',
+        // Italiano
+        'cappotto', 'giacca', 'giubbotto',
+        // Português
+        'casaco', 'jaqueta', 'blazer'
+      ],
+      'TOP': [
+        // Español
+        'jersey', 'jerseys', 'suéter', 'blusa', 'blusas', 'camiseta', 'camisetas', 'camisa', 'camisas',
+        'sudadera', 'top', 'tops', 'polo', 'pullover', 'body',
+        // English
+        'sweater', 'sweaters', 'jumper', 'blouse', 'shirt', 'shirts', 't-shirt', 'tshirt', 'tee',
+        'sweatshirt', 'hoodie', 'top', 'tops', 'polo', 'pullover', 'bodysuit', 'tank',
+        // Français
+        'pull', 'chemise', 'chemisier', 'haut', 'sweat',
+        // Deutsch
+        'pullover', 'hemd', 'bluse', 'oberteil', 'shirt',
+        // Italiano
+        'maglione', 'camicia', 'maglia', 'felpa',
+        // Português
+        'camisola', 'camisa', 'blusa', 'moletom'
+      ],
+      'BOTTOM': [
+        // Español
+        'pantalón', 'pantalones', 'pantalon', 'vaquero', 'vaqueros', 'jeans', 'falda', 'faldas',
+        'shorts', 'bermuda', 'leggins', 'leggings', 'jogger', 'chino', 'chinos',
+        // English
+        'pants', 'trousers', 'jeans', 'skirt', 'skirts', 'shorts', 'leggings', 'joggers', 'chinos', 'slacks',
+        // Français
+        'pantalon', 'jean', 'jupe', 'short',
+        // Deutsch
+        'hose', 'hosen', 'jeans', 'rock', 'shorts',
+        // Italiano
+        'pantaloni', 'jeans', 'gonna', 'shorts',
+        // Português
+        'calça', 'calças', 'jeans', 'saia', 'shorts'
+      ],
+      'DRESS': [
+        // Español
+        'vestido', 'vestidos', 'mono', 'jumpsuit',
+        // English
+        'dress', 'dresses', 'gown', 'jumpsuit', 'romper',
+        // Français
+        'robe', 'robes', 'combinaison',
+        // Deutsch
+        'kleid', 'kleider',
+        // Italiano
+        'vestito', 'abito',
+        // Português
+        'vestido', 'vestidos'
+      ],
+      'SHOES': [
+        // Español
+        'zapato', 'zapatos', 'calzado', 'zapatilla', 'zapatillas', 'bota', 'botas', 'sandalia', 'tacón', 'tacones',
+        // English
+        'shoe', 'shoes', 'footwear', 'sneaker', 'sneakers', 'boot', 'boots', 'sandal', 'sandals', 'heel', 'heels', 'loafer',
+        // Français
+        'chaussure', 'chaussures', 'basket', 'botte', 'sandale', 'talon',
+        // Deutsch
+        'schuh', 'schuhe', 'stiefel', 'sandale', 'sneaker',
+        // Italiano
+        'scarpa', 'scarpe', 'stivale', 'sandalo', 'sneaker',
+        // Português
+        'sapato', 'sapatos', 'tênis', 'bota', 'sandália'
+      ],
+      'ACCESSORY': [
+        // Español
+        'accesorio', 'accesorios', 'bolso', 'cinturón', 'bufanda', 'gorro', 'sombrero', 'gafas', 'joyería', 'collar', 'pulsera',
+        // English
+        'accessory', 'accessories', 'bag', 'belt', 'scarf', 'hat', 'sunglasses', 'jewelry', 'necklace', 'bracelet', 'watch',
+        // Français
+        'accessoire', 'sac', 'ceinture', 'écharpe', 'chapeau', 'bijou',
+        // Deutsch
+        'accessoire', 'tasche', 'gürtel', 'schal', 'hut', 'schmuck',
+        // Italiano
+        'accessorio', 'borsa', 'cintura', 'sciarpa', 'cappello', 'gioiello',
+        // Português
+        'acessório', 'bolsa', 'cinto', 'cachecol', 'chapéu', 'jóia'
+      ]
+    },
+
+    // Función para detectar tipo de prenda (busca en product_type, title y tags)
+    detectCategory(product) {
+      const searchTexts = [
+        (product.product_type || '').toLowerCase(),
+        (product.title || '').toLowerCase(),
+        Array.isArray(product.tags) ? product.tags.join(' ').toLowerCase() : (product.tags || '').toLowerCase()
+      ].join(' ');
+
+      // Buscar coincidencias en las keywords
+      for (const [category, keywords] of Object.entries(this.CATEGORY_KEYWORDS)) {
+        for (const keyword of keywords) {
+          // Buscar palabra completa o al inicio/fin de compuestos
+          const regex = new RegExp(`(^|\\s|-)${keyword}(s|es)?($|\\s|-)`, 'i');
+          if (regex.test(searchTexts)) {
+            return category;
+          }
+        }
+      }
+
+      return null; // No se pudo detectar
     },
 
     // Qué categorías complementan a cuál
@@ -223,21 +313,22 @@
     },
 
     getRecommendations(currentProd, allProducts, maxPerCategory = 3) {
-      const currentType = currentProd.product_type;
-      const currentOutfitType = this.CATEGORY_MAP[currentType];
+      const currentOutfitType = this.detectCategory(currentProd);
       const currentColor = this.extractColor(currentProd);
 
       if (!currentOutfitType) {
-        console.log('[Fashion] Tipo no reconocido:', currentType);
+        console.log('[Fashion] Tipo no reconocido para:', currentProd.title, '- product_type:', currentProd.product_type);
         return {};
       }
+
+      console.log('[Fashion] Producto actual detectado como:', currentOutfitType);
 
       const complementTypes = this.CATEGORY_COMPLEMENTS[currentOutfitType] || [];
 
       const candidates = allProducts
         .filter(p => p.id !== currentProd.id)
         .map(p => {
-          const pType = this.CATEGORY_MAP[p.product_type];
+          const pType = this.detectCategory(p);
           const pColor = this.extractColor(p);
           return {
             ...p,
@@ -247,23 +338,26 @@
             isComplement: complementTypes.includes(pType)
           };
         })
-        .filter(p => p.isComplement && p.colorScore > 0)
+        .filter(p => p.outfitType && p.isComplement && p.colorScore > 0)
         .sort((a, b) => b.colorScore - a.colorScore);
 
       const result = {};
       for (const type of complementTypes) {
-        const shopifyTypes = Object.keys(this.CATEGORY_MAP)
-          .filter(key => this.CATEGORY_MAP[key] === type);
-
         const items = candidates
-          .filter(p => shopifyTypes.includes(p.product_type))
+          .filter(p => p.outfitType === type)
           .slice(0, maxPerCategory);
 
         if (items.length > 0) {
-          const label = type === 'OUTERWEAR' ? 'Abrigos y chaquetas' :
-                       type === 'TOP' ? 'Parte de arriba' :
-                       type === 'BOTTOM' ? 'Pantalones' :
-                       type === 'SHOES' ? 'Calzado' : type;
+          // Labels multilíngue (detectamos idioma por el navegador)
+          const lang = (navigator.language || 'es').substring(0, 2);
+          const labels = {
+            'OUTERWEAR': { es: 'Abrigos y chaquetas', en: 'Coats & Jackets', fr: 'Manteaux', de: 'Mäntel & Jacken', it: 'Cappotti', pt: 'Casacos' },
+            'TOP': { es: 'Parte de arriba', en: 'Tops', fr: 'Hauts', de: 'Oberteile', it: 'Top', pt: 'Blusas' },
+            'BOTTOM': { es: 'Pantalones y faldas', en: 'Bottoms', fr: 'Bas', de: 'Hosen & Röcke', it: 'Pantaloni', pt: 'Calças' },
+            'SHOES': { es: 'Calzado', en: 'Shoes', fr: 'Chaussures', de: 'Schuhe', it: 'Scarpe', pt: 'Sapatos' },
+            'DRESS': { es: 'Vestidos', en: 'Dresses', fr: 'Robes', de: 'Kleider', it: 'Vestiti', pt: 'Vestidos' }
+          };
+          const label = labels[type]?.[lang] || labels[type]?.['en'] || type;
           result[label] = items;
         }
       }
@@ -609,11 +703,18 @@
       const response = await fetch('/products.json?limit=250');
       const data = await response.json();
 
-      sessionStorage.setItem(cacheKey, JSON.stringify(data.products));
+      // Filtrar solo productos con stock disponible
+      const productsInStock = data.products.filter(product => {
+        // Un producto tiene stock si alguna de sus variantes está disponible
+        return product.variants && product.variants.some(variant => variant.available === true);
+      });
+
+      console.log(`[VTON] Productos con stock: ${productsInStock.length} de ${data.products.length}`);
+
+      sessionStorage.setItem(cacheKey, JSON.stringify(productsInStock));
       sessionStorage.setItem(cacheTime, Date.now().toString());
 
-      console.log('[VTON] Productos obtenidos:', data.products.length);
-      return data.products;
+      return productsInStock;
     } catch (error) {
       console.error('[VTON] Error obteniendo productos:', error);
       return [];
@@ -780,6 +881,7 @@
                    data-product-image="${p.images[0]?.src || ''}"
                    data-product-title="${p.title}"
                    data-product-type="${p.product_type}"
+                   data-outfit-type="${p.outfitType}"
                    data-color-score="${p.colorScore}"
                    onclick="window.toggleOutfitItem(this)">
                 <img src="${p.images[0]?.src || ''}" alt="${p.title}">
@@ -806,8 +908,7 @@
   // Exponer función globalmente para onclick
   window.toggleOutfitItem = function(element) {
     const productId = element.dataset.productId;
-    const productType = element.dataset.productType;
-    const outfitType = FashionEngine.CATEGORY_MAP[productType];
+    const outfitType = element.dataset.outfitType; // Ya viene calculado
 
     const index = selectedOutfitItems.findIndex(p => p.id === productId);
 
@@ -817,9 +918,7 @@
       element.classList.remove('selected');
     } else {
       // Verificar si ya hay una prenda del mismo tipo
-      const existingIndex = selectedOutfitItems.findIndex(p =>
-        FashionEngine.CATEGORY_MAP[p.type] === outfitType
-      );
+      const existingIndex = selectedOutfitItems.findIndex(p => p.outfitType === outfitType);
 
       if (existingIndex > -1) {
         // Deseleccionar la anterior del mismo tipo
@@ -834,7 +933,7 @@
         id: productId,
         image: element.dataset.productImage,
         title: element.dataset.productTitle,
-        type: productType
+        outfitType: outfitType
       });
       element.classList.add('selected');
     }
