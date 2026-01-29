@@ -11,13 +11,228 @@ const corsHeaders = {
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 
+// ========================================
+// SIZING ANALYSIS FUNCTION
+// ========================================
+async function handleSizingAnalysis(body: any): Promise<Response> {
+  const { userPhoto, height, fit_preference, reference_brand, reference_size, productType, shopDomain, visitorId } = body;
+
+  if (!userPhoto) {
+    return new Response(
+      JSON.stringify({ error: 'Se requiere una foto del usuario' }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+  if (!geminiApiKey) {
+    return new Response(
+      JSON.stringify({ error: 'Configuración del servidor incompleta' }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    // Limpiar base64
+    const cleanBase64 = (str: string) => str.replace(/^data:image\/\w+;base64,/, '');
+    const userPhotoBase64 = cleanBase64(userPhoto);
+
+    // Prompt para análisis de tallas
+    const prompt = `Analyze this full-body photo and provide sizing recommendations. Return ONLY a valid JSON object with no additional text or markdown.
+
+Analyze the person's body type and proportions to help determine clothing size.
+
+Return this exact JSON structure:
+{
+  "body_type": "delgado|atletico|medio|robusto|corpulento",
+  "shoulder_width": "estrecho|medio|ancho",
+  "torso_length": "corto|medio|largo",
+  "build_notes": "Brief observation about build in Spanish (max 30 words)",
+  "fit_adjustment": number between -1 and 1,
+  "confidence": number between 0 and 1
+}
+
+Guidelines for fit_adjustment:
+- -1 to -0.5: Person appears to need a smaller size than average
+- -0.5 to 0: Slightly smaller or standard
+- 0: Standard/average build
+- 0 to 0.5: Slightly larger or standard
+- 0.5 to 1: Person appears to need a larger size than average
+
+Guidelines for confidence:
+- 0.9-1.0: Clear full-body photo with good lighting
+- 0.7-0.9: Good photo but some uncertainty
+- 0.5-0.7: Partial view or unclear proportions
+- 0.3-0.5: Limited visibility, low confidence estimate
+
+${height ? `User's height: ${height}cm - factor this into your analysis.` : ''}
+${productType ? `Product type: ${productType} - consider fit requirements for this garment type.` : ''}
+
+IMPORTANT: Return ONLY the JSON object, no explanation or markdown formatting.`;
+
+    const requestBody = {
+      contents: [{
+        parts: [
+          { text: prompt },
+          {
+            inline_data: {
+              mime_type: "image/jpeg",
+              data: userPhotoBase64
+            }
+          }
+        ]
+      }],
+      generationConfig: {
+        temperature: 0.3,
+        maxOutputTokens: 500
+      }
+    };
+
+    const model = 'gemini-2.0-flash';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`;
+
+    console.log('[SIZING] Analyzing with Gemini...');
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody)
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error('[SIZING] Gemini error:', JSON.stringify(data));
+      throw new Error(`API error: ${data.error?.message || response.status}`);
+    }
+
+    // Extraer texto de respuesta
+    const textPart = data.candidates?.[0]?.content?.parts?.find(
+      (part: any) => part.text
+    );
+
+    if (!textPart?.text) {
+      console.error('[SIZING] No text response from Gemini');
+      throw new Error('No analysis received');
+    }
+
+    // Parsear JSON de la respuesta
+    let analysis;
+    try {
+      // Limpiar posibles markdown code blocks
+      let jsonStr = textPart.text.trim();
+      jsonStr = jsonStr.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      analysis = JSON.parse(jsonStr);
+    } catch (parseError) {
+      console.error('[SIZING] Failed to parse response:', textPart.text);
+      // Fallback con valores por defecto
+      analysis = {
+        body_type: 'medio',
+        shoulder_width: 'medio',
+        torso_length: 'medio',
+        build_notes: 'No se pudo analizar la imagen con precisión',
+        fit_adjustment: 0,
+        confidence: 0.4
+      };
+    }
+
+    console.log('[SIZING] Analysis result:', JSON.stringify(analysis));
+
+    // Calcular talla recomendada
+    const SIZE_SCALE = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
+    const BRAND_OFFSETS: Record<string, number> = {
+      'zara': 0,
+      'hm': 0,
+      'mango': 0,
+      'pull_bear': 0,
+      'bershka': 0,
+      'massimo_dutti': 0.5,
+      'uniqlo': -0.5,
+      'nike': -0.5,
+      'adidas': -0.5,
+      'other': 0
+    };
+
+    const brandOffset = BRAND_OFFSETS[reference_brand] || 0;
+    const fitOffset = fit_preference === 'ajustado' ? -0.5 :
+                      fit_preference === 'holgado' ? 0.5 : 0;
+    const aiOffset = analysis.fit_adjustment || 0;
+
+    let heightOffset = 0;
+    if (height) {
+      if (height < 165) heightOffset = -0.5;
+      else if (height > 185) heightOffset = 0.5;
+    }
+
+    const totalOffset = brandOffset + fitOffset + aiOffset + heightOffset;
+    const currentIndex = SIZE_SCALE.indexOf(reference_size || 'M');
+    let recommendedIndex = Math.round(currentIndex + totalOffset);
+    recommendedIndex = Math.max(0, Math.min(SIZE_SCALE.length - 1, recommendedIndex));
+
+    const recommendedSize = SIZE_SCALE[recommendedIndex];
+
+    // Talla alternativa
+    let altIndex = totalOffset > 0 ? recommendedIndex + 1 : recommendedIndex - 1;
+    altIndex = Math.max(0, Math.min(SIZE_SCALE.length - 1, altIndex));
+    const altSize = SIZE_SCALE[altIndex];
+
+    return new Response(
+      JSON.stringify({
+        analysis,
+        recommendedSize,
+        altSize,
+        confidence: analysis.confidence,
+        offsets: {
+          brand: brandOffset,
+          fit: fitOffset,
+          ai: aiOffset,
+          height: heightOffset,
+          total: totalOffset
+        }
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+    console.error('[SIZING] Error:', errorMessage);
+
+    // Devolver resultado fallback
+    return new Response(
+      JSON.stringify({
+        analysis: {
+          body_type: 'medio',
+          shoulder_width: 'medio',
+          torso_length: 'medio',
+          build_notes: 'Análisis con datos limitados',
+          fit_adjustment: 0,
+          confidence: 0.5
+        },
+        recommendedSize: reference_size || 'M',
+        altSize: reference_size || 'M',
+        confidence: 0.5,
+        fallback: true
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const { userPhoto, productId, productImage, productImages, outfitMode, shopDomain, visitorId } = await req.json();
+    const body = await req.json();
+    const { action, userPhoto, productId, productImage, productImages, outfitMode, shopDomain, visitorId } = body;
+
+    // ========================================
+    // ANALISIS DE TALLAS
+    // ========================================
+    if (action === 'analyze_sizing') {
+      return await handleSizingAnalysis(body);
+    }
 
     // productImages es un array de URLs para outfit mode
     // productImage es para compatibilidad con el modo single

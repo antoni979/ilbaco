@@ -22,10 +22,97 @@
   let shopStatus = null; // Estado de la tienda (activo/inactivo)
 
   // Estado para outfit (Tab 2)
-  let currentTab = 'single'; // 'single' o 'outfit'
+  let currentTab = 'single'; // 'single', 'sizing' o 'outfit'
   let outfitUserPhotoBase64 = null;
   let selectedOutfitItems = []; // Prendas seleccionadas para el outfit
   let availableProducts = []; // Cache de productos de la tienda
+
+  // Estado para sizing (Tab 3)
+  let sizingUserPhotoBase64 = null;
+  let sizingData = {
+    height: null,
+    fit_preference: 'regular',
+    reference_brand: 'zara',
+    reference_size: 'M',
+    analysis: null
+  };
+
+  // ========================================
+  // FASHION TIPS - Consejos de moda animados
+  // ========================================
+  const FASHION_TIPS = [
+    { icon: '✨', text: 'El negro estiliza y combina con todo. Es tu mejor aliado para cualquier ocasión.' },
+    { icon: '🎨', text: 'La regla del 3: no uses más de tres colores en un mismo look para mantener el equilibrio.' },
+    { icon: '👗', text: 'Invierte en básicos de calidad: una buena camiseta blanca y unos jeans oscuros nunca fallan.' },
+    { icon: '💡', text: 'El fit lo es todo. Una prenda de tu talla siempre lucirá mejor que una de marca que no te queda.' },
+    { icon: '🔥', text: 'Los accesorios transforman cualquier outfit. Un buen cinturón o bolso marca la diferencia.' },
+    { icon: '👠', text: 'Los zapatos dicen mucho de ti. Mantenlos siempre limpios y en buen estado.' },
+    { icon: '🌟', text: 'Menos es más. Un look sencillo pero bien ejecutado siempre impresiona.' },
+    { icon: '💎', text: 'Los colores neutros son la base perfecta. Añade un toque de color con un accesorio.' },
+    { icon: '🧥', text: 'Un buen abrigo eleva cualquier look. Es la primera impresión que das.' },
+    { icon: '👔', text: 'Conoce tu paleta de colores. Los tonos que complementan tu piel te harán brillar.' },
+    { icon: '✂️', text: 'La ropa bien planchada transmite profesionalidad y cuidado personal.' },
+    { icon: '🎯', text: 'Viste para la ocasión, pero siempre añade un toque personal que te represente.' },
+    { icon: '💫', text: 'El denim es atemporal. Unos buenos jeans son una inversión para años.' },
+    { icon: '🌈', text: 'Los estampados pequeños estilizan, los grandes llaman la atención. Úsalos estratégicamente.' },
+    { icon: '👜', text: 'Un bolso de calidad puede hacer que un outfit económico parezca de lujo.' },
+    { icon: '🪞', text: 'Revisa tu look completo en el espejo antes de salir. Los detalles importan.' },
+    { icon: '🎭', text: 'La confianza es tu mejor accesorio. Viste lo que te haga sentir bien.' },
+    { icon: '📐', text: 'Juega con las proporciones: si arriba es holgado, abajo ajustado y viceversa.' },
+    { icon: '🌺', text: 'En primavera-verano, los tonos pastel y florales son siempre una apuesta segura.' },
+    { icon: '❄️', text: 'En otoño-invierno, las capas son tu mejor amigo. Combinan estilo y funcionalidad.' },
+    { icon: '💪', text: 'Conoce tu cuerpo y destaca tus mejores atributos con el corte adecuado.' },
+    { icon: '🎀', text: 'Un toque de color inesperado puede convertir un look aburrido en memorable.' },
+    { icon: '⌚', text: 'Los clásicos nunca pasan de moda: blazer, camisa blanca, little black dress...' },
+    { icon: '🧵', text: 'Revisa las costuras y acabados antes de comprar. La calidad se nota en los detalles.' },
+    { icon: '🛍️', text: 'Antes de comprar, piensa con qué otras prendas de tu armario lo combinarías.' }
+  ];
+
+  let fashionTipInterval = null;
+  let currentTipIndex = 0;
+
+  function startFashionTips(elementId = 'stilaro-tip-text', iconId = null) {
+    const textElement = document.getElementById(elementId);
+    const iconElement = iconId ? document.getElementById(iconId) : textElement?.previousElementSibling;
+
+    if (!textElement) return;
+
+    // Randomizar el orden de los tips
+    const shuffledTips = [...FASHION_TIPS].sort(() => Math.random() - 0.5);
+    currentTipIndex = 0;
+
+    // Mostrar primer tip
+    showTip(textElement, iconElement, shuffledTips[currentTipIndex]);
+
+    // Rotar tips cada 4 segundos
+    fashionTipInterval = setInterval(() => {
+      currentTipIndex = (currentTipIndex + 1) % shuffledTips.length;
+
+      // Animación de salida
+      textElement.classList.add('fade-out');
+
+      setTimeout(() => {
+        showTip(textElement, iconElement, shuffledTips[currentTipIndex]);
+        textElement.classList.remove('fade-out');
+      }, 300);
+    }, 4000);
+  }
+
+  function showTip(textElement, iconElement, tip) {
+    if (textElement) {
+      textElement.textContent = tip.text;
+    }
+    if (iconElement) {
+      iconElement.textContent = tip.icon;
+    }
+  }
+
+  function stopFashionTips() {
+    if (fashionTipInterval) {
+      clearInterval(fashionTipInterval);
+      fashionTipInterval = null;
+    }
+  }
 
   // ========================================
   // MOTOR DE RECOMENDACIONES DE MODA
@@ -411,6 +498,29 @@
   const outfitRetryBtn = document.getElementById('stilaro-outfit-retry-btn');
   const outfitAddAllBtn = document.getElementById('stilaro-outfit-addall-btn');
 
+  // Elements (Tab 3 - Sizing)
+  const sizingUpload = document.getElementById('stilaro-sizing-upload');
+  const sizingUploadArea = document.getElementById('stilaro-sizing-upload-area');
+  const sizingPhotoInput = document.getElementById('stilaro-sizing-photo-input');
+  const sizingUserPreview = document.getElementById('stilaro-sizing-user-preview');
+  const sizingContinueBtn = document.getElementById('stilaro-sizing-continue-btn');
+  const sizingProductImage = document.getElementById('stilaro-sizing-product-image');
+  const sizingProductTitle = document.getElementById('stilaro-sizing-product-title');
+  const sizingForm = document.getElementById('stilaro-sizing-form');
+  const sizingAnalyzeBtn = document.getElementById('stilaro-sizing-analyze-btn');
+  const sizingLoading = document.getElementById('stilaro-sizing-loading');
+  const sizingProgressFill = document.getElementById('stilaro-sizing-progress-fill');
+  const sizingProgressText = document.getElementById('stilaro-sizing-progress-text');
+  const sizingResult = document.getElementById('stilaro-sizing-result');
+  const sizingRetryBtn = document.getElementById('stilaro-sizing-retry-btn');
+  const sizingTryOnBtn = document.getElementById('stilaro-sizing-tryon-btn');
+  const recommendedSizeEl = document.getElementById('stilaro-recommended-size');
+  const altSizeEl = document.getElementById('stilaro-alt-size');
+  const confidenceFill = document.getElementById('stilaro-confidence-fill');
+  const confidenceText = document.getElementById('stilaro-confidence-text');
+  const sizingDetails = document.getElementById('stilaro-sizing-details');
+  const sizingTip = document.getElementById('stilaro-sizing-tip');
+
   // Tabs
   const tabs = document.querySelectorAll('.stilaro-tab');
 
@@ -626,6 +736,24 @@
       tab.addEventListener('click', () => switchTab(tab.dataset.tab));
     });
 
+    // ==================== TAB 3: SIZING ====================
+    // Upload (Tab 3)
+    sizingUploadArea?.addEventListener('click', (e) => {
+      if (e.target !== sizingPhotoInput) sizingPhotoInput?.click();
+    });
+    sizingUploadArea?.addEventListener('dragover', handleDragOver);
+    sizingUploadArea?.addEventListener('drop', handleSizingDrop);
+    sizingPhotoInput?.addEventListener('change', handleSizingFileSelect);
+
+    // Acciones (Tab 3)
+    sizingContinueBtn?.addEventListener('click', showSizingForm);
+    sizingAnalyzeBtn?.addEventListener('click', analyzeSizing);
+    sizingRetryBtn?.addEventListener('click', () => switchTab('sizing'));
+    sizingTryOnBtn?.addEventListener('click', goToTryOnWithSize);
+
+    // Opciones de fit y talla
+    initSizingOptions();
+
     // ==================== TAB 2: OUTFIT ====================
     // Upload (Tab 2)
     outfitUploadArea?.addEventListener('click', (e) => {
@@ -665,17 +793,23 @@
 
     // Cambiar tamaño del modal según el tab
     if (modal) {
-      modal.classList.toggle('outfit-mode', tab === 'outfit');
+      modal.classList.remove('outfit-mode', 'sizing-mode');
+      if (tab === 'outfit') modal.classList.add('outfit-mode');
+      if (tab === 'sizing') modal.classList.add('sizing-mode');
     }
 
     // Ocultar todos los steps
     [stepUpload, stepResult, stepLoading,
+     sizingUpload, sizingForm, sizingLoading, sizingResult,
      outfitUpload, outfitRecommendations, outfitLoading, outfitResult]
       .forEach(s => { if (s) s.style.display = 'none'; });
 
     // Mostrar step inicial del tab seleccionado
     if (tab === 'single') {
       if (stepUpload) stepUpload.style.display = 'block';
+    } else if (tab === 'sizing') {
+      // Tab sizing: mostrar upload de foto
+      showSizingUpload();
     } else {
       // Tab outfit: mostrar RECOMENDACIONES primero (sin pedir foto)
       showOutfitRecommendations();
@@ -1086,6 +1220,9 @@
     if (outfitProgressFill) outfitProgressFill.style.width = '0%';
     if (outfitProgressText) outfitProgressText.textContent = '0%';
 
+    // Iniciar tips de moda
+    startFashionTips('stilaro-tip-text');
+
     outfitProgressInterval = setInterval(() => {
       if (outfitCurrentProgress < 70) {
         outfitCurrentProgress += Math.random() * 5 + 2;
@@ -1107,6 +1244,9 @@
       clearInterval(outfitProgressInterval);
       outfitProgressInterval = null;
     }
+    // Detener tips de moda
+    stopFashionTips();
+
     outfitCurrentProgress = 100;
     if (outfitProgressFill) outfitProgressFill.style.width = '100%';
     if (outfitProgressText) outfitProgressText.textContent = '100%';
@@ -1149,6 +1289,459 @@
       });
   }
 
+  // ========================================
+  // TAB 3: SIZING FUNCTIONS
+  // ========================================
+
+  // Offsets de marca (positivo = talla pequeña, pedir más grande)
+  const BRAND_OFFSETS = {
+    'zara': 0,
+    'hm': 0,
+    'mango': 0,
+    'pull_bear': 0,
+    'bershka': 0,
+    'massimo_dutti': 0.5,
+    'uniqlo': -0.5,
+    'nike': -0.5,
+    'adidas': -0.5,
+    'other': 0
+  };
+
+  const SIZE_SCALE = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
+
+  function initSizingOptions() {
+    // Opciones de fit
+    const fitOptions = document.querySelectorAll('#stilaro-sizing-fit .stilaro-sizing-option');
+    fitOptions.forEach(opt => {
+      opt.addEventListener('click', () => {
+        fitOptions.forEach(o => o.classList.remove('active'));
+        opt.classList.add('active');
+        sizingData.fit_preference = opt.dataset.value;
+      });
+    });
+
+    // Opciones de talla de referencia
+    const sizeOptions = document.querySelectorAll('#stilaro-sizing-reference .stilaro-sizing-option');
+    sizeOptions.forEach(opt => {
+      opt.addEventListener('click', () => {
+        sizeOptions.forEach(o => o.classList.remove('active'));
+        opt.classList.add('active');
+        sizingData.reference_size = opt.dataset.value;
+      });
+    });
+
+    // Select de marca
+    const brandSelect = document.getElementById('stilaro-sizing-brand');
+    brandSelect?.addEventListener('change', (e) => {
+      sizingData.reference_brand = e.target.value;
+    });
+
+    // Input de altura
+    const heightInput = document.getElementById('stilaro-sizing-height');
+    heightInput?.addEventListener('change', (e) => {
+      sizingData.height = e.target.value ? parseInt(e.target.value) : null;
+    });
+  }
+
+  function handleSizingDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    sizingUploadArea.style.borderColor = '#ccc';
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      processSizingFile(files[0]);
+    }
+  }
+
+  function handleSizingFileSelect(e) {
+    const files = e.target.files;
+    if (files.length > 0) {
+      processSizingFile(files[0]);
+    }
+  }
+
+  function processSizingFile(file) {
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor, selecciona una imagen');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('La imagen es demasiado grande. Máximo 5MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      sizingUserPhotoBase64 = e.target.result;
+
+      if (sizingUserPreview) {
+        sizingUserPreview.src = sizingUserPhotoBase64;
+        sizingUserPreview.style.display = 'block';
+      }
+
+      if (sizingUploadArea) sizingUploadArea.style.display = 'none';
+      if (sizingContinueBtn) sizingContinueBtn.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function showSizingUpload() {
+    // Reset
+    sizingUserPhotoBase64 = null;
+    sizingData.analysis = null;
+
+    if (sizingUserPreview) {
+      sizingUserPreview.src = '';
+      sizingUserPreview.style.display = 'none';
+    }
+    if (sizingUploadArea) sizingUploadArea.style.display = 'block';
+    if (sizingContinueBtn) sizingContinueBtn.style.display = 'none';
+    if (sizingPhotoInput) sizingPhotoInput.value = '';
+
+    // Mostrar info del producto
+    if (sizingProductImage && currentProduct) sizingProductImage.src = currentProduct.image;
+    if (sizingProductTitle && currentProduct) sizingProductTitle.textContent = currentProduct.title;
+
+    showSizingStep(sizingUpload);
+  }
+
+  function showSizingForm() {
+    showSizingStep(sizingForm);
+  }
+
+  function showSizingStep(step) {
+    [sizingUpload, sizingForm, sizingLoading, sizingResult]
+      .forEach(s => { if (s) s.style.display = 'none'; });
+    if (step) step.style.display = 'block';
+  }
+
+  // Progress animation para sizing
+  let sizingProgressInterval = null;
+  let sizingCurrentProgress = 0;
+
+  function startSizingProgressAnimation() {
+    sizingCurrentProgress = 0;
+    if (sizingProgressFill) sizingProgressFill.style.width = '0%';
+    if (sizingProgressText) sizingProgressText.textContent = '0%';
+
+    sizingProgressInterval = setInterval(() => {
+      if (sizingCurrentProgress < 70) {
+        sizingCurrentProgress += Math.random() * 8 + 3;
+      } else if (sizingCurrentProgress < 90) {
+        sizingCurrentProgress += Math.random() * 3 + 1;
+      } else if (sizingCurrentProgress < 95) {
+        sizingCurrentProgress += Math.random() * 1;
+      }
+
+      sizingCurrentProgress = Math.min(sizingCurrentProgress, 95);
+
+      if (sizingProgressFill) sizingProgressFill.style.width = sizingCurrentProgress + '%';
+      if (sizingProgressText) sizingProgressText.textContent = Math.floor(sizingCurrentProgress) + '%';
+    }, 150);
+  }
+
+  function stopSizingProgressAnimation() {
+    if (sizingProgressInterval) {
+      clearInterval(sizingProgressInterval);
+      sizingProgressInterval = null;
+    }
+    sizingCurrentProgress = 100;
+    if (sizingProgressFill) sizingProgressFill.style.width = '100%';
+    if (sizingProgressText) sizingProgressText.textContent = '100%';
+  }
+
+  async function analyzeSizing() {
+    if (!sizingUserPhotoBase64) {
+      alert('Por favor, sube una foto primero');
+      return;
+    }
+
+    showSizingStep(sizingLoading);
+    startSizingProgressAnimation();
+
+    try {
+      // Llamar al endpoint de análisis de tallas
+      const payload = {
+        userPhoto: sizingUserPhotoBase64,
+        height: sizingData.height,
+        fit_preference: sizingData.fit_preference,
+        reference_brand: sizingData.reference_brand,
+        reference_size: sizingData.reference_size,
+        productType: currentProduct?.product_type || '',
+        shopDomain: shopDomain,
+        visitorId: visitorId,
+        action: 'analyze_sizing'
+      };
+
+      const response = await fetch(CONFIG.edgeFunctionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${CONFIG.supabaseKey}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al analizar');
+      }
+
+      sizingData.analysis = data.analysis;
+      stopSizingProgressAnimation();
+      showSizingResult(data);
+
+    } catch (error) {
+      console.error('[Sizing] Error:', error);
+      stopSizingProgressAnimation();
+
+      // Fallback: calcular talla sin IA
+      const fallbackResult = calculateSizingFallback();
+      sizingData.analysis = fallbackResult.analysis;
+      showSizingResult(fallbackResult);
+    }
+  }
+
+  function calculateSizingFallback() {
+    // Cálculo sin IA basado en los datos del formulario
+    const brandOffset = BRAND_OFFSETS[sizingData.reference_brand] || 0;
+    const fitOffset = sizingData.fit_preference === 'ajustado' ? -0.5 :
+                      sizingData.fit_preference === 'holgado' ? 0.5 : 0;
+
+    // Ajuste por altura si está disponible
+    let heightOffset = 0;
+    if (sizingData.height) {
+      if (sizingData.height < 165) heightOffset = -0.5;
+      else if (sizingData.height > 185) heightOffset = 0.5;
+    }
+
+    const totalOffset = brandOffset + fitOffset + heightOffset;
+    const currentIndex = SIZE_SCALE.indexOf(sizingData.reference_size);
+    let recommendedIndex = Math.round(currentIndex + totalOffset);
+    recommendedIndex = Math.max(0, Math.min(SIZE_SCALE.length - 1, recommendedIndex));
+
+    const recommendedSize = SIZE_SCALE[recommendedIndex];
+
+    // Calcular talla alternativa
+    let altIndex = totalOffset > 0 ? recommendedIndex + 1 : recommendedIndex - 1;
+    altIndex = Math.max(0, Math.min(SIZE_SCALE.length - 1, altIndex));
+    const altSize = SIZE_SCALE[altIndex];
+
+    return {
+      analysis: {
+        body_type: 'medio',
+        shoulder_width: 'medio',
+        torso_length: 'medio',
+        fit_adjustment: totalOffset,
+        confidence: 0.6
+      },
+      recommendedSize,
+      altSize,
+      confidence: 0.6,
+      brandOffset,
+      fitOffset,
+      heightOffset
+    };
+  }
+
+  function showSizingResult(data) {
+    // Calcular talla recomendada
+    let recommendedSize, altSize, confidence;
+
+    if (data.recommendedSize) {
+      // Si viene del servidor
+      recommendedSize = data.recommendedSize;
+      altSize = data.altSize;
+      confidence = data.confidence || 0.7;
+    } else {
+      // Calcular desde analysis
+      const analysis = data.analysis || sizingData.analysis;
+      const brandOffset = BRAND_OFFSETS[sizingData.reference_brand] || 0;
+      const fitOffset = sizingData.fit_preference === 'ajustado' ? -0.5 :
+                        sizingData.fit_preference === 'holgado' ? 0.5 : 0;
+      const aiOffset = analysis?.fit_adjustment || 0;
+
+      let heightOffset = 0;
+      if (sizingData.height) {
+        if (sizingData.height < 165) heightOffset = -0.5;
+        else if (sizingData.height > 185) heightOffset = 0.5;
+      }
+
+      const totalOffset = brandOffset + fitOffset + aiOffset + heightOffset;
+      const currentIndex = SIZE_SCALE.indexOf(sizingData.reference_size);
+      let recommendedIndex = Math.round(currentIndex + totalOffset);
+      recommendedIndex = Math.max(0, Math.min(SIZE_SCALE.length - 1, recommendedIndex));
+
+      recommendedSize = SIZE_SCALE[recommendedIndex];
+
+      // Talla alternativa
+      let altIndex = totalOffset > 0 ? recommendedIndex + 1 : recommendedIndex - 1;
+      altIndex = Math.max(0, Math.min(SIZE_SCALE.length - 1, altIndex));
+      altSize = SIZE_SCALE[altIndex];
+
+      confidence = analysis?.confidence || 0.6;
+    }
+
+    // Mostrar talla recomendada
+    if (recommendedSizeEl) recommendedSizeEl.textContent = recommendedSize;
+
+    // Mostrar talla alternativa
+    if (altSizeEl) {
+      if (altSize !== recommendedSize) {
+        altSizeEl.textContent = `También podrías usar ${altSize}`;
+        altSizeEl.style.display = 'block';
+      } else {
+        altSizeEl.style.display = 'none';
+      }
+    }
+
+    // Mostrar confianza
+    const confPercent = Math.round(confidence * 100);
+    let confLevel = 'high';
+    let confText = 'Alta';
+    if (confidence < 0.5) {
+      confLevel = 'low';
+      confText = 'Baja';
+    } else if (confidence < 0.75) {
+      confLevel = 'medium';
+      confText = 'Media';
+    }
+
+    if (confidenceFill) {
+      confidenceFill.style.width = confPercent + '%';
+      confidenceFill.className = 'confidence-fill' + (confLevel !== 'high' ? ' ' + confLevel : '');
+    }
+    if (confidenceText) {
+      confidenceText.textContent = confText;
+      confidenceText.className = 'confidence-text' + (confLevel !== 'high' ? ' ' + confLevel : '');
+    }
+
+    // Mostrar detalles del análisis
+    if (sizingDetails && data.analysis) {
+      const analysis = data.analysis;
+      sizingDetails.innerHTML = `
+        <p><span>Complexión:</span> <strong>${translateBodyType(analysis.body_type)}</strong></p>
+        <p><span>Hombros:</span> <strong>${translateWidth(analysis.shoulder_width)}</strong></p>
+        <p><span>Tu preferencia:</span> <strong>${sizingData.fit_preference}</strong></p>
+        <p><span>Marca referencia:</span> <strong>${sizingData.reference_brand.replace('_', ' ')}</strong></p>
+      `;
+    }
+
+    // Mostrar tip
+    if (sizingTip) {
+      const tips = getSizingTip(recommendedSize, sizingData, data.analysis);
+      sizingTip.textContent = tips;
+    }
+
+    showSizingStep(sizingResult);
+  }
+
+  function translateBodyType(type) {
+    const translations = {
+      'delgado': 'Delgado',
+      'atletico': 'Atlético',
+      'medio': 'Medio',
+      'robusto': 'Robusto',
+      'corpulento': 'Corpulento'
+    };
+    return translations[type] || type || 'Medio';
+  }
+
+  function translateWidth(width) {
+    const translations = {
+      'estrecho': 'Estrecho',
+      'medio': 'Medio',
+      'ancho': 'Ancho'
+    };
+    return translations[width] || width || 'Medio';
+  }
+
+  function getSizingTip(size, userData, analysis) {
+    const brand = userData.reference_brand;
+    const fit = userData.fit_preference;
+
+    // Tips específicos según marca
+    if (brand === 'uniqlo' || brand === 'nike' || brand === 'adidas') {
+      return `${brand.charAt(0).toUpperCase() + brand.slice(1)} tiende a tallar grande. Si entre dos tallas dudas, quédate con la más pequeña.`;
+    }
+
+    if (brand === 'massimo_dutti') {
+      return `Massimo Dutti suele tallar más ajustado. Si prefieres comodidad, esta talla ${size} te irá bien.`;
+    }
+
+    // Tips según preferencia de fit
+    if (fit === 'ajustado') {
+      return `Para un ajuste ceñido, la talla ${size} debería quedarte perfecta. Revisa las medidas si la prenda es muy entallada.`;
+    }
+
+    if (fit === 'holgado') {
+      return `Con la talla ${size} conseguirás ese look más relajado que buscas sin que te quede excesivamente grande.`;
+    }
+
+    // Tip genérico
+    return `Basándonos en tu complexión y preferencias, la talla ${size} debería sentarte bien. ¡Pruébatela virtualmente!`;
+  }
+
+  function goToTryOnWithSize() {
+    // Guardar la foto de sizing para usarla en el probador
+    if (sizingUserPhotoBase64) {
+      userPhotoBase64 = sizingUserPhotoBase64;
+
+      // Mostrar preview
+      if (userPreview) {
+        userPreview.src = userPhotoBase64;
+        userPreview.style.display = 'block';
+      }
+      if (uploadArea) uploadArea.style.display = 'none';
+      if (tryOnBtn) tryOnBtn.style.display = 'block';
+    }
+
+    // Cambiar a tab de probador
+    switchTab('single');
+  }
+
+  function resetSizingState() {
+    sizingUserPhotoBase64 = null;
+    sizingData = {
+      height: null,
+      fit_preference: 'regular',
+      reference_brand: 'zara',
+      reference_size: 'M',
+      analysis: null
+    };
+
+    // Reset UI
+    if (sizingUserPreview) {
+      sizingUserPreview.src = '';
+      sizingUserPreview.style.display = 'none';
+    }
+    if (sizingUploadArea) sizingUploadArea.style.display = 'block';
+    if (sizingContinueBtn) sizingContinueBtn.style.display = 'none';
+    if (sizingPhotoInput) sizingPhotoInput.value = '';
+
+    // Reset form values
+    const heightInput = document.getElementById('stilaro-sizing-height');
+    if (heightInput) heightInput.value = '';
+
+    const brandSelect = document.getElementById('stilaro-sizing-brand');
+    if (brandSelect) brandSelect.value = 'zara';
+
+    // Reset fit options
+    const fitOptions = document.querySelectorAll('#stilaro-sizing-fit .stilaro-sizing-option');
+    fitOptions.forEach(opt => {
+      opt.classList.toggle('active', opt.dataset.value === 'regular');
+    });
+
+    // Reset size options
+    const sizeOptions = document.querySelectorAll('#stilaro-sizing-reference .stilaro-sizing-option');
+    sizeOptions.forEach(opt => {
+      opt.classList.toggle('active', opt.dataset.value === 'M');
+    });
+  }
+
   async function openModal(e) {
     const btn = e.currentTarget;
     currentProduct = {
@@ -1167,8 +1760,13 @@
     if (outfitProductImage) outfitProductImage.src = currentProduct.image;
     if (outfitProductTitle) outfitProductTitle.textContent = currentProduct.title;
 
-    // Reset estado visual de ambas pestañas
+    // Mostrar info del producto (Tab 3 - Sizing)
+    if (sizingProductImage) sizingProductImage.src = currentProduct.image;
+    if (sizingProductTitle) sizingProductTitle.textContent = currentProduct.title;
+
+    // Reset estado visual de todas las pestañas
     resetToUpload();
+    resetSizingState();
     resetToOutfitUpload();
 
     // Reset a tab 1
@@ -1179,7 +1777,9 @@
     if (modal) modal.style.display = 'block';
 
     // Ocultar todos los steps excepto el de upload tab 1
-    [stepResult, stepLoading, outfitUpload, outfitRecommendations, outfitLoading, outfitResult]
+    [stepResult, stepLoading,
+     sizingUpload, sizingForm, sizingLoading, sizingResult,
+     outfitUpload, outfitRecommendations, outfitLoading, outfitResult]
       .forEach(s => { if (s) s.style.display = 'none'; });
     if (stepUpload) stepUpload.style.display = 'block';
 
@@ -1394,6 +1994,9 @@
     if (progressFill) progressFill.style.width = '0%';
     if (progressText) progressText.textContent = '0%';
 
+    // Iniciar tips de moda
+    startFashionTips('stilaro-tip-text-single');
+
     progressInterval = setInterval(() => {
       // Incremento no lineal: rapido al principio, lento cerca del 95%
       if (currentProgress < 70) {
@@ -1416,6 +2019,9 @@
       clearInterval(progressInterval);
       progressInterval = null;
     }
+    // Detener tips de moda
+    stopFashionTips();
+
     // Completar la barra
     currentProgress = 100;
     if (progressFill) progressFill.style.width = '100%';

@@ -44,6 +44,7 @@
     <!-- Pestañas -->
     <div class="stilaro-vton-tabs">
       <button class="stilaro-tab active" data-tab="single">Probar prenda</button>
+      <button class="stilaro-tab" data-tab="sizing">Mi talla</button>
       <button class="stilaro-tab" data-tab="outfit">Completar look</button>
     </div>
 
@@ -102,6 +103,160 @@
           <div class="stilaro-progress-fill" id="stilaro-progress-fill"></div>
         </div>
         <p class="stilaro-progress-text" id="stilaro-progress-text">0%</p>
+
+        <!-- Consejos de moda animados -->
+        <div class="stilaro-fashion-tips" id="stilaro-fashion-tips-single">
+          <div class="fashion-tip-container">
+            <span class="fashion-tip-icon">✨</span>
+            <p class="fashion-tip-text" id="stilaro-tip-text-single">Preparando tu look personalizado...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== -->
+      <!-- TAB 3: CALCULADOR DE TALLAS -->
+      <!-- ==================== -->
+
+      <!-- Paso 1 Sizing: Subir foto -->
+      <div class="stilaro-vton-step stilaro-sizing-step" id="stilaro-sizing-upload" style="display: none;">
+        <div class="stilaro-vton-product-preview">
+          <img id="stilaro-sizing-product-image" src="" alt="Producto" width="60" height="60">
+          <span id="stilaro-sizing-product-title"></span>
+        </div>
+
+        <div class="stilaro-sizing-intro">
+          <p>Sube una foto de cuerpo completo para analizar tu complexión y recomendarte la talla perfecta.</p>
+        </div>
+
+        <div class="stilaro-vton-upload-area" id="stilaro-sizing-upload-area">
+          <input type="file" id="stilaro-sizing-photo-input" accept="image/*" style="display: none;">
+          <div class="stilaro-vton-upload-content">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <p>Sube tu foto de cuerpo completo</p>
+            <span>JPG, PNG (max 5MB)</span>
+          </div>
+        </div>
+
+        <img id="stilaro-sizing-user-preview" src="" alt="Tu foto" style="display: none;">
+
+        <button id="stilaro-sizing-continue-btn" class="stilaro-vton-primary-btn" style="display: none;">
+          Continuar
+        </button>
+      </div>
+
+      <!-- Paso 2 Sizing: Formulario de datos -->
+      <div class="stilaro-vton-step stilaro-sizing-step" id="stilaro-sizing-form" style="display: none;">
+        <div class="stilaro-sizing-form-content">
+          <h3>Cuéntanos un poco más</h3>
+
+          <div class="stilaro-sizing-field">
+            <label for="stilaro-sizing-height">Altura (opcional)</label>
+            <div class="stilaro-sizing-input-group">
+              <input type="number" id="stilaro-sizing-height" placeholder="175" min="100" max="250">
+              <span class="stilaro-sizing-unit">cm</span>
+            </div>
+          </div>
+
+          <div class="stilaro-sizing-field">
+            <label>¿Cómo te gusta que te quede la ropa?</label>
+            <div class="stilaro-sizing-options" id="stilaro-sizing-fit">
+              <button type="button" class="stilaro-sizing-option" data-value="ajustado">
+                <span class="option-icon">👔</span>
+                <span class="option-label">Ajustado</span>
+              </button>
+              <button type="button" class="stilaro-sizing-option active" data-value="regular">
+                <span class="option-icon">👕</span>
+                <span class="option-label">Regular</span>
+              </button>
+              <button type="button" class="stilaro-sizing-option" data-value="holgado">
+                <span class="option-icon">🧥</span>
+                <span class="option-label">Holgado</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="stilaro-sizing-field">
+            <label for="stilaro-sizing-brand">¿Qué marca usas de referencia?</label>
+            <select id="stilaro-sizing-brand">
+              <option value="zara">Zara</option>
+              <option value="hm">H&M</option>
+              <option value="mango">Mango</option>
+              <option value="pull_bear">Pull&Bear</option>
+              <option value="bershka">Bershka</option>
+              <option value="massimo_dutti">Massimo Dutti</option>
+              <option value="uniqlo">Uniqlo</option>
+              <option value="nike">Nike</option>
+              <option value="adidas">Adidas</option>
+              <option value="other">Otra</option>
+            </select>
+          </div>
+
+          <div class="stilaro-sizing-field">
+            <label>¿Qué talla sueles usar en esa marca?</label>
+            <div class="stilaro-sizing-options stilaro-sizing-sizes" id="stilaro-sizing-reference">
+              <button type="button" class="stilaro-sizing-option" data-value="XS">XS</button>
+              <button type="button" class="stilaro-sizing-option" data-value="S">S</button>
+              <button type="button" class="stilaro-sizing-option active" data-value="M">M</button>
+              <button type="button" class="stilaro-sizing-option" data-value="L">L</button>
+              <button type="button" class="stilaro-sizing-option" data-value="XL">XL</button>
+              <button type="button" class="stilaro-sizing-option" data-value="XXL">XXL</button>
+            </div>
+          </div>
+        </div>
+
+        <button id="stilaro-sizing-analyze-btn" class="stilaro-vton-primary-btn">
+          Calcular mi talla
+        </button>
+      </div>
+
+      <!-- Paso 3 Sizing: Loading -->
+      <div class="stilaro-vton-step stilaro-sizing-step" id="stilaro-sizing-loading" style="display: none;">
+        <div class="stilaro-vton-spinner"></div>
+        <p>Analizando tu complexión...</p>
+        <div class="stilaro-progress-bar">
+          <div class="stilaro-progress-fill" id="stilaro-sizing-progress-fill"></div>
+        </div>
+        <p class="stilaro-progress-text" id="stilaro-sizing-progress-text">0%</p>
+      </div>
+
+      <!-- Paso 4 Sizing: Resultado -->
+      <div class="stilaro-vton-step stilaro-sizing-step" id="stilaro-sizing-result" style="display: none;">
+        <div class="stilaro-sizing-result-card">
+          <div class="stilaro-sizing-result-header">
+            <span class="sizing-result-icon">👕</span>
+            <h3>Tu talla recomendada</h3>
+          </div>
+
+          <div class="stilaro-sizing-recommended">
+            <span class="sizing-main-size" id="stilaro-recommended-size">M</span>
+            <span class="sizing-alt-size" id="stilaro-alt-size">También podrías usar L</span>
+          </div>
+
+          <div class="stilaro-sizing-confidence" id="stilaro-sizing-confidence">
+            <span class="confidence-label">Confianza:</span>
+            <div class="confidence-bar">
+              <div class="confidence-fill" id="stilaro-confidence-fill"></div>
+            </div>
+            <span class="confidence-text" id="stilaro-confidence-text">Alta</span>
+          </div>
+
+          <div class="stilaro-sizing-details" id="stilaro-sizing-details">
+            <!-- Se rellenará con JS -->
+          </div>
+
+          <div class="stilaro-sizing-tip" id="stilaro-sizing-tip">
+            <!-- Se rellenará con JS -->
+          </div>
+        </div>
+
+        <div class="stilaro-vton-actions">
+          <button id="stilaro-sizing-retry-btn" class="stilaro-vton-secondary-btn">Recalcular</button>
+          <button id="stilaro-sizing-tryon-btn" class="stilaro-vton-primary-btn">Probar esta talla</button>
+        </div>
       </div>
 
       <!-- ==================== -->
@@ -166,6 +321,14 @@
           <div class="stilaro-progress-fill" id="stilaro-outfit-progress-fill"></div>
         </div>
         <p class="stilaro-progress-text" id="stilaro-outfit-progress-text">0%</p>
+
+        <!-- Consejos de moda animados -->
+        <div class="stilaro-fashion-tips" id="stilaro-fashion-tips">
+          <div class="fashion-tip-container">
+            <span class="fashion-tip-icon">✨</span>
+            <p class="fashion-tip-text" id="stilaro-tip-text">Preparando tu look personalizado...</p>
+          </div>
+        </div>
       </div>
 
       <!-- Paso 4 Outfit: Resultado -->
@@ -192,10 +355,36 @@
 </div>
 
 <style>
+  /* ==================== */
+  /* CSS VARIABLES */
+  /* ==================== */
+  :root {
+    --stilaro-primary: {{ block.settings.button_bg_color }};
+    --stilaro-primary-text: {{ block.settings.button_text_color }};
+    --stilaro-gray-50: #f9fafb;
+    --stilaro-gray-100: #f3f4f6;
+    --stilaro-gray-200: #e5e7eb;
+    --stilaro-gray-300: #d1d5db;
+    --stilaro-gray-400: #9ca3af;
+    --stilaro-gray-500: #6b7280;
+    --stilaro-gray-600: #4b5563;
+    --stilaro-gray-700: #374151;
+    --stilaro-gray-800: #1f2937;
+    --stilaro-radius-sm: 6px;
+    --stilaro-radius-md: 8px;
+    --stilaro-radius-lg: 12px;
+    --stilaro-radius-xl: 16px;
+    --stilaro-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    --stilaro-transition: 0.2s ease;
+  }
+
   .stilaro-vton-container {
     max-width: none !important;
   }
 
+  /* ==================== */
+  /* MODAL BASE */
+  /* ==================== */
   .stilaro-vton-modal {
     position: fixed !important;
     top: 0 !important;
@@ -208,6 +397,9 @@
     max-width: none !important;
     margin: 0 !important;
     padding: 0 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .stilaro-vton-modal-overlay {
@@ -218,38 +410,33 @@
     bottom: 0 !important;
     width: 100% !important;
     height: 100% !important;
-    background: rgba(0, 0, 0, 0.3) !important;
+    background: rgba(0, 0, 0, 0.4) !important;
     pointer-events: none !important;
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
   }
 
   .stilaro-vton-modal-content {
-    position: fixed !important;
-    top: 40% !important;
-    left: 50% !important;
-    transform: translate(-50%, -50%) !important;
+    position: relative !important;
     background: white !important;
-    border-radius: 16px !important;
-    width: 90vw !important;
+    border-radius: var(--stilaro-radius-xl) !important;
+    width: calc(100% - 32px) !important;
     max-width: 480px !important;
-    max-height: 75vh !important;
+    max-height: calc(100vh - 40px) !important;
+    max-height: calc(100dvh - 40px) !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
-    padding: 24px !important;
+    padding: clamp(16px, 4vw, 24px) !important;
     scrollbar-width: thin;
-    scrollbar-color: #ccc transparent;
+    scrollbar-color: var(--stilaro-gray-300) transparent;
     box-sizing: border-box !important;
     margin: 0 !important;
-    transition: max-width 0.3s ease;
+    transition: max-width 0.3s ease, max-height 0.3s ease;
     pointer-events: auto !important;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+    box-shadow: var(--stilaro-shadow) !important;
   }
 
-  /* Modal más ancho para modo outfit */
-  .stilaro-vton-modal.outfit-mode .stilaro-vton-modal-content {
-    max-width: 580px !important;
-    max-height: 70vh !important;
-  }
-
+  /* Scrollbar personalizado */
   .stilaro-vton-modal-content::-webkit-scrollbar {
     width: 6px;
   }
@@ -259,34 +446,47 @@
   }
 
   .stilaro-vton-modal-content::-webkit-scrollbar-thumb {
-    background-color: #ccc;
+    background-color: var(--stilaro-gray-300);
     border-radius: 3px;
   }
 
+  /* Modal expandido para outfit */
+  .stilaro-vton-modal.outfit-mode .stilaro-vton-modal-content {
+    max-width: 580px !important;
+  }
+
+  /* Modal expandido para sizing */
+  .stilaro-vton-modal.sizing-mode .stilaro-vton-modal-content {
+    max-width: 480px !important;
+  }
+
+  /* ==================== */
+  /* BOTON CERRAR */
+  /* ==================== */
   .stilaro-vton-close {
     position: absolute;
-    top: 12px;
-    right: 12px;
-    width: 36px;
-    height: 36px;
-    background: #f5f5f5;
+    top: clamp(8px, 2vw, 12px);
+    right: clamp(8px, 2vw, 12px);
+    width: clamp(32px, 8vw, 36px);
+    height: clamp(32px, 8vw, 36px);
+    background: var(--stilaro-gray-100);
     border: none;
     border-radius: 50%;
-    font-size: 20px;
+    font-size: clamp(18px, 4vw, 22px);
     font-weight: 300;
     cursor: pointer;
-    color: #666;
+    color: var(--stilaro-gray-500);
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
+    transition: all var(--stilaro-transition);
     z-index: 10;
     line-height: 1;
   }
 
   .stilaro-vton-close:hover {
-    background: #e8e8e8;
-    color: #333;
+    background: var(--stilaro-gray-200);
+    color: var(--stilaro-gray-700);
     transform: scale(1.05);
   }
 
@@ -294,172 +494,28 @@
     transform: scale(0.95);
   }
 
+  /* ==================== */
+  /* HEADER */
+  /* ==================== */
   .stilaro-vton-header {
     text-align: center;
-    margin-bottom: 24px;
+    margin-bottom: clamp(16px, 4vw, 24px);
+    padding-right: 40px;
   }
 
   .stilaro-vton-header h2 {
-    margin: 0 0 8px 0;
-    font-size: 22px;
+    margin: 0 0 6px 0;
+    font-size: clamp(18px, 4.5vw, 22px);
+    font-weight: 600;
+    color: var(--stilaro-gray-800);
+    line-height: 1.3;
   }
 
   .stilaro-vton-header p {
     margin: 0;
-    color: #666;
-    font-size: 14px;
-  }
-
-  .stilaro-vton-product-preview {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px;
-    background: #f5f5f5;
-    border-radius: 8px;
-    margin-bottom: 16px;
-  }
-
-  .stilaro-vton-product-preview img {
-    width: 60px;
-    height: 60px;
-    object-fit: cover;
-    border-radius: 8px;
-  }
-
-  .stilaro-vton-upload-area {
-    border: 2px dashed #ccc;
-    border-radius: 12px;
-    padding: 40px 20px;
-    text-align: center;
-    cursor: pointer;
-    transition: border-color 0.2s;
-  }
-
-  .stilaro-vton-upload-area:hover {
-    border-color: {{ block.settings.button_bg_color }};
-  }
-
-  .stilaro-vton-upload-content svg {
-    color: #999;
-    margin-bottom: 12px;
-  }
-
-  .stilaro-vton-upload-content p {
-    margin: 0 0 4px 0;
-    font-weight: 500;
-  }
-
-  .stilaro-vton-upload-content span {
-    color: #999;
-    font-size: 12px;
-  }
-
-  #stilaro-user-preview {
-    width: 100%;
-    max-height: 300px;
-    object-fit: contain;
-    border-radius: 8px;
-    margin-bottom: 16px;
-  }
-
-  .stilaro-vton-primary-btn {
-    width: 100%;
-    padding: 14px;
-    background: {{ block.settings.button_bg_color }};
-    color: {{ block.settings.button_text_color }};
-    border: none;
-    border-radius: 8px;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-  }
-
-  .stilaro-vton-secondary-btn {
-    padding: 14px;
-    background: #f5f5f5;
-    color: #333;
-    border: none;
-    border-radius: 8px;
-    font-size: 14px;
-    cursor: pointer;
-  }
-
-  .stilaro-vton-result img {
-    width: 100%;
-    border-radius: 8px;
-    margin-bottom: 16px;
-  }
-
-  .stilaro-vton-actions {
-    display: flex;
-    gap: 12px;
-  }
-
-  .stilaro-vton-actions .stilaro-vton-primary-btn {
-    flex: 1;
-  }
-
-  .stilaro-vton-spinner {
-    width: 48px;
-    height: 48px;
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid {{ block.settings.button_bg_color }};
-    border-radius: 50%;
-    animation: stilaro-spin 1s linear infinite;
-    margin: 40px auto;
-  }
-
-  @keyframes stilaro-spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-
-  #stilaro-step-loading {
-    text-align: center;
-    padding: 40px 0;
-  }
-
-  #stilaro-step-loading p {
-    color: #666;
-    margin-top: 16px;
-  }
-
-  .stilaro-progress-bar {
-    width: 100%;
-    height: 8px;
-    background: #f0f0f0;
-    border-radius: 4px;
-    overflow: hidden;
-    margin: 24px 0 8px 0;
-  }
-
-  .stilaro-progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, {{ block.settings.button_bg_color }} 0%, {{ block.settings.button_bg_color }}dd 100%);
-    width: 0%;
-    transition: width 0.3s ease;
-    border-radius: 4px;
-  }
-
-  .stilaro-progress-text {
-    font-size: 14px;
-    font-weight: 600;
-    color: {{ block.settings.button_bg_color }};
-  }
-
-  .stilaro-vton-actions {
-    display: grid;
-    grid-template-columns: auto auto 1fr;
-    gap: 8px;
-  }
-
-  .stilaro-vton-actions .stilaro-vton-primary-btn {
-    grid-column: 3;
-  }
-
-  .stilaro-vton-body {
-    min-height: 200px;
+    color: var(--stilaro-gray-500);
+    font-size: clamp(12px, 3vw, 14px);
+    line-height: 1.4;
   }
 
   /* ==================== */
@@ -468,133 +524,373 @@
   .stilaro-vton-tabs {
     display: flex;
     gap: 0;
-    margin-bottom: 24px;
-    border-bottom: 2px solid #eee;
+    margin-bottom: clamp(16px, 4vw, 24px);
+    border-bottom: 2px solid var(--stilaro-gray-200);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .stilaro-vton-tabs::-webkit-scrollbar {
+    display: none;
   }
 
   .stilaro-tab {
     flex: 1;
-    padding: 12px 16px;
+    min-width: max-content;
+    padding: clamp(10px, 2.5vw, 12px) clamp(8px, 2vw, 16px);
     background: none;
     border: none;
     border-bottom: 2px solid transparent;
     margin-bottom: -2px;
-    font-size: 14px;
+    font-size: clamp(12px, 3vw, 14px);
     font-weight: 500;
-    color: #666;
+    color: var(--stilaro-gray-500);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all var(--stilaro-transition);
+    white-space: nowrap;
   }
 
   .stilaro-tab:hover {
-    color: #333;
+    color: var(--stilaro-gray-700);
   }
 
   .stilaro-tab.active {
-    color: {{ block.settings.button_bg_color }};
-    border-bottom-color: {{ block.settings.button_bg_color }};
+    color: var(--stilaro-primary);
+    border-bottom-color: var(--stilaro-primary);
+  }
+
+  /* ==================== */
+  /* BODY */
+  /* ==================== */
+  .stilaro-vton-body {
+    min-height: 180px;
+  }
+
+  /* ==================== */
+  /* PRODUCT PREVIEW */
+  /* ==================== */
+  .stilaro-vton-product-preview {
+    display: flex;
+    align-items: center;
+    gap: clamp(8px, 2vw, 12px);
+    padding: clamp(10px, 2.5vw, 12px);
+    background: var(--stilaro-gray-50);
+    border-radius: var(--stilaro-radius-md);
+    margin-bottom: clamp(12px, 3vw, 16px);
+  }
+
+  .stilaro-vton-product-preview img {
+    width: clamp(50px, 12vw, 60px);
+    height: clamp(50px, 12vw, 60px);
+    object-fit: cover;
+    border-radius: var(--stilaro-radius-md);
+    flex-shrink: 0;
+  }
+
+  .stilaro-vton-product-preview span {
+    font-size: clamp(12px, 3vw, 14px);
+    font-weight: 500;
+    color: var(--stilaro-gray-700);
+    line-height: 1.3;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  /* ==================== */
+  /* UPLOAD AREA */
+  /* ==================== */
+  .stilaro-vton-upload-area {
+    border: 2px dashed var(--stilaro-gray-300);
+    border-radius: var(--stilaro-radius-lg);
+    padding: clamp(24px, 6vw, 40px) clamp(16px, 4vw, 20px);
+    text-align: center;
+    cursor: pointer;
+    transition: all var(--stilaro-transition);
+  }
+
+  .stilaro-vton-upload-area:hover {
+    border-color: var(--stilaro-primary);
+    background: rgba(0, 0, 0, 0.01);
+  }
+
+  .stilaro-vton-upload-content svg {
+    color: var(--stilaro-gray-400);
+    margin-bottom: clamp(8px, 2vw, 12px);
+    width: clamp(36px, 10vw, 48px);
+    height: clamp(36px, 10vw, 48px);
+  }
+
+  .stilaro-vton-upload-content p {
+    margin: 0 0 4px 0;
+    font-weight: 500;
+    font-size: clamp(13px, 3.5vw, 15px);
+    color: var(--stilaro-gray-700);
+  }
+
+  .stilaro-vton-upload-content span {
+    color: var(--stilaro-gray-400);
+    font-size: clamp(11px, 2.8vw, 12px);
+  }
+
+  /* ==================== */
+  /* USER PREVIEW */
+  /* ==================== */
+  #stilaro-user-preview,
+  #stilaro-outfit-user-preview,
+  #stilaro-sizing-user-preview {
+    width: 100%;
+    max-height: clamp(200px, 45vw, 300px);
+    object-fit: contain;
+    border-radius: var(--stilaro-radius-md);
+    margin-bottom: clamp(12px, 3vw, 16px);
+  }
+
+  /* ==================== */
+  /* BUTTONS */
+  /* ==================== */
+  .stilaro-vton-primary-btn {
+    width: 100%;
+    padding: clamp(12px, 3vw, 14px);
+    background: var(--stilaro-primary);
+    color: var(--stilaro-primary-text);
+    border: none;
+    border-radius: var(--stilaro-radius-md);
+    font-size: clamp(14px, 3.5vw, 16px);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--stilaro-transition);
+    touch-action: manipulation;
+  }
+
+  .stilaro-vton-primary-btn:hover {
+    opacity: 0.9;
+  }
+
+  .stilaro-vton-primary-btn:active {
+    transform: scale(0.98);
+  }
+
+  .stilaro-vton-secondary-btn {
+    padding: clamp(10px, 2.5vw, 14px) clamp(12px, 3vw, 16px);
+    background: var(--stilaro-gray-100);
+    color: var(--stilaro-gray-700);
+    border: none;
+    border-radius: var(--stilaro-radius-md);
+    font-size: clamp(12px, 3vw, 14px);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--stilaro-transition);
+    touch-action: manipulation;
+    white-space: nowrap;
+  }
+
+  .stilaro-vton-secondary-btn:hover {
+    background: var(--stilaro-gray-200);
+  }
+
+  .stilaro-vton-secondary-btn:active {
+    transform: scale(0.98);
+  }
+
+  /* ==================== */
+  /* RESULT */
+  /* ==================== */
+  .stilaro-vton-result img {
+    width: 100%;
+    max-height: clamp(280px, 50vw, 400px);
+    object-fit: contain;
+    border-radius: var(--stilaro-radius-md);
+    margin-bottom: clamp(12px, 3vw, 16px);
+  }
+
+  /* ==================== */
+  /* ACTIONS */
+  /* ==================== */
+  .stilaro-vton-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: clamp(6px, 1.5vw, 8px);
+  }
+
+  .stilaro-vton-actions .stilaro-vton-primary-btn {
+    flex: 1;
+    min-width: 140px;
+  }
+
+  .stilaro-vton-actions .stilaro-vton-secondary-btn {
+    flex: 0 0 auto;
+  }
+
+  /* ==================== */
+  /* LOADING */
+  /* ==================== */
+  .stilaro-vton-spinner {
+    width: clamp(40px, 10vw, 48px);
+    height: clamp(40px, 10vw, 48px);
+    border: 4px solid var(--stilaro-gray-100);
+    border-top: 4px solid var(--stilaro-primary);
+    border-radius: 50%;
+    animation: stilaro-spin 1s linear infinite;
+    margin: clamp(30px, 8vw, 40px) auto;
+  }
+
+  @keyframes stilaro-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  #stilaro-step-loading,
+  #stilaro-sizing-loading,
+  #stilaro-outfit-loading {
+    text-align: center;
+    padding: clamp(24px, 6vw, 40px) 0;
+  }
+
+  #stilaro-step-loading p,
+  #stilaro-sizing-loading p,
+  #stilaro-outfit-loading p {
+    color: var(--stilaro-gray-500);
+    margin-top: clamp(12px, 3vw, 16px);
+    font-size: clamp(13px, 3.5vw, 15px);
+  }
+
+  .stilaro-progress-bar {
+    width: 100%;
+    height: clamp(6px, 1.5vw, 8px);
+    background: var(--stilaro-gray-100);
+    border-radius: 4px;
+    overflow: hidden;
+    margin: clamp(16px, 4vw, 24px) 0 clamp(6px, 1.5vw, 8px) 0;
+  }
+
+  .stilaro-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--stilaro-primary) 0%, var(--stilaro-primary) 100%);
+    width: 0%;
+    transition: width 0.3s ease;
+    border-radius: 4px;
+  }
+
+  .stilaro-progress-text {
+    font-size: clamp(12px, 3vw, 14px);
+    font-weight: 600;
+    color: var(--stilaro-primary);
   }
 
   /* ==================== */
   /* OUTFIT TAB STYLES */
   /* ==================== */
-  #stilaro-outfit-user-preview {
-    width: 100%;
-    max-height: 250px;
-    object-fit: contain;
-    border-radius: 8px;
-    margin-bottom: 16px;
-  }
-
-  .stilaro-outfit-summary {
-    background: #f8f8f8;
-    border-radius: 10px;
-    padding: 14px;
-    margin-bottom: 20px;
+  .stilaro-outfit-summary,
+  .stilaro-outfit-selected-summary {
+    background: var(--stilaro-gray-50);
+    border-radius: var(--stilaro-radius-lg);
+    padding: clamp(10px, 2.5vw, 14px);
+    margin-bottom: clamp(14px, 3.5vw, 20px);
     text-align: center;
   }
 
-  .stilaro-outfit-summary strong {
+  .stilaro-outfit-summary strong,
+  .stilaro-outfit-selected-summary p {
     display: block;
-    margin-bottom: 10px;
-    font-size: 14px;
-    color: #555;
+    margin-bottom: clamp(6px, 1.5vw, 10px);
+    font-size: clamp(12px, 3vw, 14px);
+    color: var(--stilaro-gray-600);
   }
 
-  .outfit-preview {
+  .outfit-preview,
+  #stilaro-outfit-upload-preview {
     display: flex;
     justify-content: center;
-    gap: 10px;
+    gap: clamp(6px, 1.5vw, 10px);
     flex-wrap: wrap;
   }
 
-  .outfit-preview img {
-    width: 55px;
-    height: 72px;
+  .outfit-preview img,
+  #stilaro-outfit-upload-preview img {
+    width: clamp(45px, 12vw, 55px);
+    height: clamp(58px, 15vw, 72px);
     object-fit: cover;
-    border-radius: 6px;
-    border: 2px solid {{ block.settings.button_bg_color }};
+    border-radius: var(--stilaro-radius-sm);
+    border: 2px solid var(--stilaro-primary);
   }
 
   .stilaro-recommendations-header {
     text-align: center;
-    margin-bottom: 16px;
+    margin-bottom: clamp(12px, 3vw, 16px);
   }
 
   .stilaro-recommendations-header h3 {
-    margin: 0 0 6px 0;
-    font-size: 18px;
+    margin: 0 0 clamp(4px, 1vw, 6px) 0;
+    font-size: clamp(16px, 4vw, 18px);
     font-weight: 600;
+    color: var(--stilaro-gray-800);
   }
 
   .stilaro-recommendations-header p {
     margin: 0;
-    color: #666;
-    font-size: 14px;
+    color: var(--stilaro-gray-500);
+    font-size: clamp(12px, 3vw, 14px);
   }
 
   .stilaro-recommendations-grid {
-    max-height: 300px;
+    max-height: clamp(220px, 40vh, 300px);
     overflow-y: auto;
-    margin-bottom: 16px;
+    overflow-x: hidden;
+    margin-bottom: clamp(12px, 3vw, 16px);
     padding-right: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--stilaro-gray-300) transparent;
+  }
+
+  .stilaro-recommendations-grid::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .stilaro-recommendations-grid::-webkit-scrollbar-thumb {
+    background-color: var(--stilaro-gray-300);
+    border-radius: 2px;
   }
 
   .stilaro-style-analysis {
     background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
     border: 1px solid #fcd34d;
     border-left: 3px solid #f59e0b;
-    padding: 10px 12px;
-    margin-bottom: 14px;
-    border-radius: 0 6px 6px 0;
-    font-size: 12.5px;
+    padding: clamp(8px, 2vw, 10px) clamp(10px, 2.5vw, 12px);
+    margin-bottom: clamp(10px, 2.5vw, 14px);
+    border-radius: 0 var(--stilaro-radius-sm) var(--stilaro-radius-sm) 0;
+    font-size: clamp(11px, 2.8vw, 12.5px);
     line-height: 1.45;
     color: #92400e;
     display: flex;
     align-items: flex-start;
-    gap: 8px;
+    gap: clamp(6px, 1.5vw, 8px);
   }
 
   .stilaro-style-analysis::before {
     content: "💡";
-    font-size: 14px;
+    font-size: clamp(12px, 3vw, 14px);
     flex-shrink: 0;
   }
 
   .stilaro-loading-text {
     text-align: center;
-    color: #666;
-    padding: 20px;
+    color: var(--stilaro-gray-500);
+    padding: clamp(16px, 4vw, 20px);
+    font-size: clamp(13px, 3.5vw, 14px);
   }
 
   .stilaro-recommendation-category {
-    margin-bottom: 20px;
+    margin-bottom: clamp(14px, 3.5vw, 20px);
   }
 
   .stilaro-recommendation-category h4 {
-    margin: 0 0 10px 0;
-    font-size: 13px;
-    color: #666;
+    margin: 0 0 clamp(8px, 2vw, 10px) 0;
+    font-size: clamp(11px, 2.8vw, 13px);
+    color: var(--stilaro-gray-500);
     text-transform: uppercase;
     letter-spacing: 0.5px;
     font-weight: 600;
@@ -603,29 +899,41 @@
 
   .stilaro-recommendation-items {
     display: flex;
-    gap: 12px;
+    gap: clamp(8px, 2vw, 12px);
     overflow-x: auto;
     padding-bottom: 10px;
-    justify-content: center;
+    justify-content: flex-start;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--stilaro-gray-200) transparent;
+  }
+
+  .stilaro-recommendation-items::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .stilaro-recommendation-items::-webkit-scrollbar-thumb {
+    background-color: var(--stilaro-gray-200);
+    border-radius: 2px;
   }
 
   .stilaro-recommendation-item {
-    flex: 0 0 100px;
+    flex: 0 0 clamp(85px, 22vw, 100px);
     cursor: pointer;
-    border: 2px solid #eee;
-    border-radius: 8px;
-    padding: 6px;
-    transition: all 0.2s ease;
+    border: 2px solid var(--stilaro-gray-200);
+    border-radius: var(--stilaro-radius-md);
+    padding: clamp(4px, 1vw, 6px);
+    transition: all var(--stilaro-transition);
     position: relative;
     background: white;
   }
 
   .stilaro-recommendation-item:hover {
-    border-color: #ccc;
+    border-color: var(--stilaro-gray-300);
   }
 
   .stilaro-recommendation-item.selected {
-    border-color: {{ block.settings.button_bg_color }};
+    border-color: var(--stilaro-primary);
     background: rgba(0,0,0,0.02);
   }
 
@@ -638,19 +946,19 @@
 
   .stilaro-recommendation-item .item-title {
     display: block;
-    font-size: 10px;
+    font-size: clamp(9px, 2.3vw, 10px);
     margin-top: 4px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: #333;
+    color: var(--stilaro-gray-700);
     font-weight: 500;
   }
 
   .stilaro-recommendation-item .item-reason {
     display: block;
-    font-size: 9px;
-    color: #888;
+    font-size: clamp(8px, 2vw, 9px);
+    color: var(--stilaro-gray-400);
     margin-top: 2px;
     line-height: 1.2;
     font-style: italic;
@@ -658,11 +966,11 @@
 
   .stilaro-recommendation-item .item-score {
     position: absolute;
-    top: 6px;
-    left: 6px;
-    background: {{ block.settings.button_bg_color }};
-    color: {{ block.settings.button_text_color }};
-    font-size: 9px;
+    top: clamp(4px, 1vw, 6px);
+    left: clamp(4px, 1vw, 6px);
+    background: var(--stilaro-primary);
+    color: var(--stilaro-primary-text);
+    font-size: clamp(8px, 2vw, 9px);
     padding: 2px 5px;
     border-radius: 3px;
     font-weight: 600;
@@ -670,17 +978,17 @@
 
   .stilaro-recommendation-item .item-check {
     position: absolute;
-    top: 6px;
-    right: 6px;
-    width: 20px;
-    height: 20px;
-    background: {{ block.settings.button_bg_color }};
-    color: {{ block.settings.button_text_color }};
+    top: clamp(4px, 1vw, 6px);
+    right: clamp(4px, 1vw, 6px);
+    width: clamp(18px, 4.5vw, 20px);
+    height: clamp(18px, 4.5vw, 20px);
+    background: var(--stilaro-primary);
+    color: var(--stilaro-primary-text);
     border-radius: 50%;
     display: none;
     align-items: center;
     justify-content: center;
-    font-size: 11px;
+    font-size: clamp(9px, 2.3vw, 11px);
   }
 
   .stilaro-recommendation-item.selected .item-check {
@@ -689,14 +997,16 @@
 
   .stilaro-recommendations-actions {
     display: flex;
-    gap: 12px;
-    padding: 16px 0 0 0;
-    border-top: 1px solid #eee;
+    gap: clamp(8px, 2vw, 12px);
+    padding-top: clamp(12px, 3vw, 16px);
+    border-top: 1px solid var(--stilaro-gray-200);
     background: white;
     position: sticky;
-    bottom: -32px;
-    margin: 0 -32px -32px -32px;
-    padding: 16px 32px 20px 32px;
+    bottom: calc(-1 * clamp(16px, 4vw, 24px));
+    margin: 0 calc(-1 * clamp(16px, 4vw, 24px)) calc(-1 * clamp(16px, 4vw, 24px));
+    padding-left: clamp(16px, 4vw, 24px);
+    padding-right: clamp(16px, 4vw, 24px);
+    padding-bottom: clamp(16px, 4vw, 20px);
   }
 
   .stilaro-recommendations-actions .stilaro-vton-primary-btn {
@@ -705,55 +1015,633 @@
 
   .stilaro-outfit-items-list {
     display: flex;
-    gap: 8px;
+    gap: clamp(6px, 1.5vw, 8px);
     justify-content: center;
-    margin-bottom: 16px;
+    margin-bottom: clamp(12px, 3vw, 16px);
     flex-wrap: wrap;
   }
 
   .stilaro-outfit-items-list .outfit-item {
     text-align: center;
-    font-size: 11px;
-    color: #666;
+    font-size: clamp(10px, 2.5vw, 11px);
+    color: var(--stilaro-gray-500);
   }
 
   .stilaro-outfit-items-list .outfit-item img {
-    width: 45px;
-    height: 60px;
+    width: clamp(38px, 10vw, 45px);
+    height: clamp(50px, 13vw, 60px);
     object-fit: cover;
     border-radius: 4px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--stilaro-gray-300);
     display: block;
     margin-bottom: 4px;
   }
 
-  .stilaro-outfit-selected-summary {
-    background: #f8f8f8;
-    border-radius: 8px;
-    padding: 12px;
-    margin-bottom: 16px;
+  /* ==================== */
+  /* SIZING TAB STYLES */
+  /* ==================== */
+  .stilaro-sizing-intro {
+    text-align: center;
+    margin-bottom: clamp(12px, 3vw, 16px);
+    padding: clamp(10px, 2.5vw, 12px);
+    background: var(--stilaro-gray-50);
+    border-radius: var(--stilaro-radius-md);
+  }
+
+  .stilaro-sizing-intro p {
+    margin: 0;
+    font-size: clamp(12px, 3vw, 13px);
+    color: var(--stilaro-gray-500);
+    line-height: 1.5;
+  }
+
+  .stilaro-sizing-form-content {
+    padding: 0 clamp(2px, 0.5vw, 4px);
+  }
+
+  .stilaro-sizing-form-content h3 {
+    text-align: center;
+    margin: 0 0 clamp(16px, 4vw, 20px) 0;
+    font-size: clamp(16px, 4vw, 18px);
+    font-weight: 600;
+    color: var(--stilaro-gray-800);
+  }
+
+  .stilaro-sizing-field {
+    margin-bottom: clamp(16px, 4vw, 20px);
+  }
+
+  .stilaro-sizing-field label {
+    display: block;
+    font-size: clamp(12px, 3vw, 13px);
+    font-weight: 500;
+    color: var(--stilaro-gray-700);
+    margin-bottom: clamp(6px, 1.5vw, 8px);
+  }
+
+  .stilaro-sizing-input-group {
+    display: flex;
+    align-items: center;
+    gap: clamp(6px, 1.5vw, 8px);
+  }
+
+  .stilaro-sizing-input-group input {
+    flex: 1;
+    padding: clamp(10px, 2.5vw, 12px);
+    border: 1px solid var(--stilaro-gray-300);
+    border-radius: var(--stilaro-radius-md);
+    font-size: 16px; /* Prevents zoom on iOS */
     text-align: center;
   }
 
-  .stilaro-outfit-selected-summary p {
-    margin: 0 0 8px 0;
-    font-size: 13px;
-    color: #666;
+  .stilaro-sizing-input-group input:focus {
+    outline: none;
+    border-color: var(--stilaro-primary);
   }
 
-  #stilaro-outfit-upload-preview {
+  .stilaro-sizing-unit {
+    font-size: clamp(13px, 3.5vw, 14px);
+    color: var(--stilaro-gray-500);
+    font-weight: 500;
+  }
+
+  .stilaro-sizing-field select {
+    width: 100%;
+    padding: clamp(10px, 2.5vw, 12px);
+    border: 1px solid var(--stilaro-gray-300);
+    border-radius: var(--stilaro-radius-md);
+    font-size: 16px; /* Prevents zoom on iOS */
+    background: white;
+    cursor: pointer;
+  }
+
+  .stilaro-sizing-field select:focus {
+    outline: none;
+    border-color: var(--stilaro-primary);
+  }
+
+  .stilaro-sizing-options {
     display: flex;
+    gap: clamp(6px, 1.5vw, 8px);
+    flex-wrap: wrap;
     justify-content: center;
-    gap: 8px;
+  }
+
+  .stilaro-sizing-option {
+    flex: 1;
+    min-width: clamp(60px, 16vw, 70px);
+    max-width: clamp(85px, 22vw, 100px);
+    padding: clamp(10px, 2.5vw, 12px) clamp(6px, 1.5vw, 8px);
+    border: 2px solid var(--stilaro-gray-200);
+    border-radius: var(--stilaro-radius-md);
+    background: white;
+    cursor: pointer;
+    transition: all var(--stilaro-transition);
+    text-align: center;
+  }
+
+  .stilaro-sizing-option:hover {
+    border-color: var(--stilaro-gray-300);
+  }
+
+  .stilaro-sizing-option.active {
+    border-color: var(--stilaro-primary);
+    background: rgba(0,0,0,0.02);
+  }
+
+  .stilaro-sizing-option .option-icon {
+    display: block;
+    font-size: clamp(18px, 4.5vw, 20px);
+    margin-bottom: 4px;
+  }
+
+  .stilaro-sizing-option .option-label {
+    display: block;
+    font-size: clamp(10px, 2.5vw, 11px);
+    font-weight: 500;
+    color: var(--stilaro-gray-700);
+  }
+
+  .stilaro-sizing-sizes .stilaro-sizing-option {
+    min-width: clamp(40px, 10vw, 45px);
+    max-width: clamp(50px, 13vw, 55px);
+    padding: clamp(8px, 2vw, 10px) clamp(4px, 1vw, 6px);
+    font-size: clamp(12px, 3vw, 14px);
+    font-weight: 600;
+  }
+
+  /* Resultado de tallas */
+  .stilaro-sizing-result-card {
+    background: linear-gradient(135deg, var(--stilaro-gray-50) 0%, #fff 100%);
+    border: 1px solid var(--stilaro-gray-200);
+    border-radius: var(--stilaro-radius-lg);
+    padding: clamp(16px, 4vw, 20px);
+    margin-bottom: clamp(12px, 3vw, 16px);
+    text-align: center;
+  }
+
+  .stilaro-sizing-result-header {
+    margin-bottom: clamp(12px, 3vw, 16px);
+  }
+
+  .stilaro-sizing-result-header .sizing-result-icon {
+    font-size: clamp(28px, 7vw, 32px);
+    display: block;
+    margin-bottom: clamp(6px, 1.5vw, 8px);
+  }
+
+  .stilaro-sizing-result-header h3 {
+    margin: 0;
+    font-size: clamp(14px, 3.5vw, 16px);
+    font-weight: 600;
+    color: var(--stilaro-gray-700);
+  }
+
+  .stilaro-sizing-recommended {
+    margin-bottom: clamp(16px, 4vw, 20px);
+  }
+
+  .sizing-main-size {
+    display: block;
+    font-size: clamp(40px, 10vw, 48px);
+    font-weight: 700;
+    color: var(--stilaro-primary);
+    line-height: 1;
+    margin-bottom: clamp(6px, 1.5vw, 8px);
+  }
+
+  .sizing-alt-size {
+    display: block;
+    font-size: clamp(12px, 3vw, 13px);
+    color: var(--stilaro-gray-500);
+  }
+
+  .stilaro-sizing-confidence {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(8px, 2vw, 10px);
+    margin-bottom: clamp(12px, 3vw, 16px);
+    padding: clamp(8px, 2vw, 10px);
+    background: #fff;
+    border-radius: var(--stilaro-radius-md);
     flex-wrap: wrap;
   }
 
-  #stilaro-outfit-upload-preview img {
-    width: 50px;
-    height: 65px;
-    object-fit: cover;
-    border-radius: 4px;
-    border: 2px solid {{ block.settings.button_bg_color }};
+  .confidence-label {
+    font-size: clamp(11px, 2.8vw, 12px);
+    color: var(--stilaro-gray-500);
+  }
+
+  .confidence-bar {
+    width: clamp(60px, 15vw, 80px);
+    height: 6px;
+    background: var(--stilaro-gray-200);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .confidence-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
+    border-radius: 3px;
+    transition: width 0.5s ease;
+  }
+
+  .confidence-fill.medium {
+    background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
+  }
+
+  .confidence-fill.low {
+    background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+  }
+
+  .confidence-text {
+    font-size: clamp(11px, 2.8vw, 12px);
+    font-weight: 600;
+    color: #22c55e;
+  }
+
+  .confidence-text.medium {
+    color: #d97706;
+  }
+
+  .confidence-text.low {
+    color: #dc2626;
+  }
+
+  .stilaro-sizing-details {
+    text-align: left;
+    font-size: clamp(11px, 2.8vw, 12px);
+    color: var(--stilaro-gray-500);
+    padding: clamp(10px, 2.5vw, 12px);
+    background: #fff;
+    border-radius: var(--stilaro-radius-md);
+    margin-bottom: clamp(10px, 2.5vw, 12px);
+  }
+
+  .stilaro-sizing-details p {
+    margin: 0 0 clamp(4px, 1vw, 6px) 0;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .stilaro-sizing-details p:last-child {
+    margin-bottom: 0;
+  }
+
+  .stilaro-sizing-details strong {
+    color: var(--stilaro-gray-700);
+  }
+
+  .stilaro-sizing-tip {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    border: 1px solid #fcd34d;
+    border-left: 3px solid #f59e0b;
+    padding: clamp(8px, 2vw, 10px) clamp(10px, 2.5vw, 12px);
+    border-radius: 0 var(--stilaro-radius-sm) var(--stilaro-radius-sm) 0;
+    font-size: clamp(11px, 2.8vw, 12px);
+    line-height: 1.4;
+    color: #92400e;
+    text-align: left;
+  }
+
+  .stilaro-sizing-tip::before {
+    content: "💡 ";
+  }
+
+  /* ==================== */
+  /* RESPONSIVE: MOBILE (<480px) */
+  /* ==================== */
+  @media screen and (max-width: 480px) {
+    .stilaro-vton-modal-content {
+      width: calc(100% - 16px) !important;
+      max-height: calc(100vh - 24px) !important;
+      max-height: calc(100dvh - 24px) !important;
+      border-radius: var(--stilaro-radius-lg) !important;
+    }
+
+    .stilaro-vton-header {
+      padding-right: 32px;
+    }
+
+    .stilaro-tab {
+      padding: 10px 6px;
+      font-size: 11px;
+    }
+
+    .stilaro-vton-actions {
+      flex-direction: column;
+    }
+
+    .stilaro-vton-actions .stilaro-vton-secondary-btn {
+      width: 100%;
+      order: 1;
+    }
+
+    .stilaro-vton-actions .stilaro-vton-primary-btn {
+      order: 0;
+    }
+
+    .stilaro-recommendations-actions {
+      flex-direction: column;
+    }
+
+    .stilaro-recommendations-actions .stilaro-vton-secondary-btn {
+      width: 100%;
+      order: 1;
+    }
+
+    .stilaro-recommendations-actions .stilaro-vton-primary-btn {
+      order: 0;
+    }
+
+    .stilaro-recommendation-items {
+      justify-content: flex-start;
+      padding-left: 4px;
+    }
+
+    .stilaro-sizing-options {
+      gap: 4px;
+    }
+
+    .stilaro-sizing-option {
+      min-width: 55px;
+      max-width: 80px;
+      padding: 8px 4px;
+    }
+
+    .stilaro-sizing-sizes .stilaro-sizing-option {
+      min-width: 36px;
+      max-width: 48px;
+      padding: 8px 4px;
+    }
+  }
+
+  /* ==================== */
+  /* RESPONSIVE: SMALL MOBILE (<360px) */
+  /* ==================== */
+  @media screen and (max-width: 360px) {
+    .stilaro-vton-modal-content {
+      padding: 12px !important;
+    }
+
+    .stilaro-vton-header h2 {
+      font-size: 16px;
+    }
+
+    .stilaro-tab {
+      padding: 8px 4px;
+      font-size: 10px;
+    }
+
+    .stilaro-vton-product-preview {
+      padding: 8px;
+      gap: 8px;
+    }
+
+    .stilaro-vton-product-preview img {
+      width: 45px;
+      height: 45px;
+    }
+
+    .stilaro-vton-upload-area {
+      padding: 20px 12px;
+    }
+
+    .stilaro-recommendation-item {
+      flex: 0 0 75px;
+    }
+
+    .sizing-main-size {
+      font-size: 36px;
+    }
+  }
+
+  /* ==================== */
+  /* RESPONSIVE: TABLET (481px - 768px) */
+  /* ==================== */
+  @media screen and (min-width: 481px) and (max-width: 768px) {
+    .stilaro-vton-modal-content {
+      max-width: 520px !important;
+    }
+
+    .stilaro-vton-modal.outfit-mode .stilaro-vton-modal-content {
+      max-width: 600px !important;
+    }
+
+    .stilaro-recommendation-items {
+      justify-content: center;
+    }
+  }
+
+  /* ==================== */
+  /* RESPONSIVE: DESKTOP (>768px) */
+  /* ==================== */
+  @media screen and (min-width: 769px) {
+    .stilaro-vton-modal-content {
+      max-height: 85vh !important;
+    }
+
+    .stilaro-vton-modal.outfit-mode .stilaro-vton-modal-content {
+      max-width: 640px !important;
+    }
+
+    .stilaro-recommendation-items {
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .stilaro-recommendation-item {
+      flex: 0 0 110px;
+    }
+  }
+
+  /* ==================== */
+  /* LANDSCAPE MODE */
+  /* ==================== */
+  @media screen and (max-height: 500px) and (orientation: landscape) {
+    .stilaro-vton-modal-content {
+      max-height: calc(100vh - 20px) !important;
+      max-height: calc(100dvh - 20px) !important;
+    }
+
+    #stilaro-user-preview,
+    #stilaro-outfit-user-preview,
+    #stilaro-sizing-user-preview {
+      max-height: 150px;
+    }
+
+    .stilaro-vton-result img {
+      max-height: 200px;
+    }
+
+    .stilaro-vton-spinner {
+      margin: 20px auto;
+    }
+
+    .stilaro-recommendations-grid {
+      max-height: 150px;
+    }
+  }
+
+  /* ==================== */
+  /* HIGH DPI DISPLAYS */
+  /* ==================== */
+  @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .stilaro-vton-modal-content {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+  }
+
+  /* ==================== */
+  /* REDUCED MOTION */
+  /* ==================== */
+  @media (prefers-reduced-motion: reduce) {
+    .stilaro-vton-spinner {
+      animation: none;
+    }
+
+    .stilaro-vton-modal-content,
+    .stilaro-tab,
+    .stilaro-vton-primary-btn,
+    .stilaro-vton-secondary-btn,
+    .stilaro-recommendation-item,
+    .stilaro-sizing-option {
+      transition: none;
+    }
+  }
+
+  /* ==================== */
+  /* SAFE AREA (notch devices) */
+  /* ==================== */
+  @supports (padding: max(0px)) {
+    .stilaro-vton-modal-content {
+      padding-left: max(clamp(16px, 4vw, 24px), env(safe-area-inset-left)) !important;
+      padding-right: max(clamp(16px, 4vw, 24px), env(safe-area-inset-right)) !important;
+      padding-bottom: max(clamp(16px, 4vw, 24px), env(safe-area-inset-bottom)) !important;
+    }
+  }
+
+  /* ==================== */
+  /* FASHION TIPS ANIMATION */
+  /* ==================== */
+  .stilaro-fashion-tips {
+    margin-top: clamp(20px, 5vw, 28px);
+    padding: clamp(14px, 3.5vw, 18px);
+    background: linear-gradient(135deg, #fdf4ff 0%, #fae8ff 50%, #f5d0fe 100%);
+    border-radius: var(--stilaro-radius-lg);
+    border: 1px solid #e879f9;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stilaro-fashion-tips::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 200%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.4) 50%,
+      transparent 100%
+    );
+    animation: stilaro-shimmer 2.5s infinite;
+  }
+
+  @keyframes stilaro-shimmer {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(50%); }
+  }
+
+  .fashion-tip-container {
+    display: flex;
+    align-items: flex-start;
+    gap: clamp(10px, 2.5vw, 12px);
+    position: relative;
+    z-index: 1;
+  }
+
+  .fashion-tip-icon {
+    font-size: clamp(20px, 5vw, 24px);
+    flex-shrink: 0;
+    animation: stilaro-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes stilaro-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.8; }
+  }
+
+  .fashion-tip-text {
+    margin: 0;
+    font-size: clamp(12px, 3vw, 14px);
+    color: #86198f;
+    line-height: 1.5;
+    font-weight: 500;
+    animation: stilaro-fade-in 0.5s ease-out;
+  }
+
+  @keyframes stilaro-fade-in {
+    0% {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .fashion-tip-text.fade-out {
+    animation: stilaro-fade-out 0.3s ease-in forwards;
+  }
+
+  @keyframes stilaro-fade-out {
+    0% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+  }
+
+  /* Variantes de iconos para diferentes tips */
+  .fashion-tip-icon.tip-color { content: '🎨'; }
+  .fashion-tip-icon.tip-style { content: '👗'; }
+  .fashion-tip-icon.tip-trend { content: '🔥'; }
+  .fashion-tip-icon.tip-advice { content: '💡'; }
+
+  /* Responsive adjustments */
+  @media screen and (max-width: 480px) {
+    .stilaro-fashion-tips {
+      margin-top: 16px;
+      padding: 12px;
+    }
+
+    .fashion-tip-text {
+      font-size: 12px;
+    }
+  }
+
+  /* Modo oscuro (si el tema lo soporta) */
+  @media (prefers-color-scheme: dark) {
+    .stilaro-fashion-tips {
+      background: linear-gradient(135deg, #581c87 0%, #701a75 50%, #86198f 100%);
+      border-color: #c026d3;
+    }
+
+    .fashion-tip-text {
+      color: #fae8ff;
+    }
   }
 </style>
 
