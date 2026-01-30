@@ -25,6 +25,9 @@
   let shopDomain = null;
   let shopStatus = null; // Estado de la tienda (activo/inactivo)
 
+  // FOTO GLOBAL - Compartida entre todas las pestañas
+  let globalUserPhotoBase64 = null;
+
   // Estado para outfit (Tab 2)
   let currentTab = 'single'; // 'single', 'sizing' o 'outfit'
   let outfitUserPhotoBase64 = null;
@@ -463,6 +466,15 @@
   // Elementos DOM
   const modal = document.getElementById('stilaro-vton-modal');
   const closeBtn = modal?.querySelector('.stilaro-vton-close');
+
+  // FOTO GLOBAL - Elementos
+  const globalPhotoSection = document.getElementById('stilaro-global-photo-section');
+  const globalUploadArea = document.getElementById('stilaro-global-upload-area');
+  const globalPhotoInput = document.getElementById('stilaro-global-photo-input');
+  const globalPhotoPreview = document.getElementById('stilaro-global-photo-preview');
+  const globalPhotoImg = document.getElementById('stilaro-global-photo-img');
+  const globalPhotoChange = document.getElementById('stilaro-global-photo-change');
+
   const uploadArea = document.getElementById('stilaro-upload-area');
   const photoInput = document.getElementById('stilaro-photo-input');
   const userPreview = document.getElementById('stilaro-user-preview');
@@ -750,8 +762,320 @@
     console.log('[VTON] Theme detected - BG:', bgColor, 'Text:', textColor);
   }
 
+  // ========================================
+  // MODAL CENTRADO (CSS flexbox lo maneja)
+  // ========================================
+  function positionModalOverButton() {
+    console.log('[VTON] Modal abierto - aplicando estilos de respaldo');
+
+    // CRÍTICO: Mover el modal directamente al BODY si no está ahí
+    if (modal && modal.parentElement !== document.body) {
+      console.warn('[VTON] ⚠️ Modal NO está en body - MOVIENDOLO...');
+      console.log('[VTON] Padre actual:', modal.parentElement?.tagName, modal.parentElement?.className);
+      document.body.appendChild(modal);
+      console.log('[VTON] ✅ Modal movido a body');
+    }
+
+    // Forzar estilos inline como respaldo por si CSS falla
+    if (modal) {
+      // Estilos críticos del modal con !important via cssText
+      modal.style.cssText = `
+        display: flex !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        z-index: 2147483647 !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        transform: none !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+      `;
+
+      const overlay = modal.querySelector('.stilaro-vton-modal-overlay');
+      if (overlay) {
+        overlay.style.cssText = `
+          position: fixed !important;
+          top: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          bottom: 0 !important;
+          width: 100vw !important;
+          height: 100vh !important;
+          background: rgba(0, 0, 0, 0.5) !important;
+          z-index: 2147483646 !important;
+          pointer-events: auto !important;
+        `;
+      }
+
+      const content = modal.querySelector('.stilaro-vton-modal-content');
+      if (content) {
+        // Usar setProperty para máxima prioridad
+        content.style.setProperty('position', 'relative', 'important');
+        content.style.setProperty('background', '#ffffff', 'important');
+        content.style.setProperty('color', '#000000', 'important');
+        content.style.setProperty('z-index', '2', 'important');
+        content.style.setProperty('width', '450px', 'important');
+        content.style.setProperty('height', 'auto', 'important');
+        content.style.setProperty('min-height', '500px', 'important');
+        content.style.setProperty('border-radius', '16px', 'important');
+        content.style.setProperty('padding', '24px', 'important');
+        content.style.setProperty('max-height', 'calc(100vh - 40px)', 'important');
+        content.style.setProperty('overflow-y', 'auto', 'important');
+        content.style.setProperty('opacity', '1', 'important');
+        content.style.setProperty('visibility', 'visible', 'important');
+        content.style.setProperty('pointer-events', 'auto', 'important');
+        content.style.setProperty('display', 'block', 'important');
+        content.style.setProperty('box-sizing', 'border-box', 'important');
+
+        // Forzar visibilidad y dimensiones de elementos hijos
+        const header = content.querySelector('.stilaro-vton-header');
+        const tabs = content.querySelector('.stilaro-vton-tabs');
+        const body = content.querySelector('.stilaro-vton-body');
+        const closeBtn = content.querySelector('.stilaro-vton-close');
+
+        if (header) {
+          header.style.setProperty('display', 'block', 'important');
+          header.style.setProperty('visibility', 'visible', 'important');
+          header.style.setProperty('min-height', '50px', 'important');
+          header.style.setProperty('color', '#000000', 'important');
+        }
+        if (tabs) {
+          tabs.style.setProperty('display', 'flex', 'important');
+          tabs.style.setProperty('visibility', 'visible', 'important');
+          tabs.style.setProperty('min-height', '40px', 'important');
+        }
+        if (body) {
+          body.style.setProperty('display', 'block', 'important');
+          body.style.setProperty('visibility', 'visible', 'important');
+          body.style.setProperty('min-height', '300px', 'important');
+        }
+        if (closeBtn) {
+          closeBtn.style.setProperty('display', 'flex', 'important');
+          closeBtn.style.setProperty('visibility', 'visible', 'important');
+          closeBtn.style.setProperty('width', '36px', 'important');
+          closeBtn.style.setProperty('height', '36px', 'important');
+        }
+      }
+
+      // Diagnóstico completo del modal
+      const modalStyle = getComputedStyle(modal);
+      const contentStyle = content ? getComputedStyle(content) : null;
+
+      console.log('[VTON] ===== ESTADO DEL MODAL =====');
+      console.log('[VTON] Modal existe:', !!modal);
+      console.log('[VTON] Modal dimensiones:', modal.offsetWidth, 'x', modal.offsetHeight);
+      console.log('[VTON] Modal display:', modalStyle.display);
+      console.log('[VTON] Modal position:', modalStyle.position);
+      console.log('[VTON] Modal z-index:', modalStyle.zIndex);
+      console.log('[VTON] Modal opacity:', modalStyle.opacity);
+      console.log('[VTON] Modal visibility:', modalStyle.visibility);
+      console.log('[VTON] Modal transform:', modalStyle.transform);
+      console.log('[VTON] Modal top/left:', modalStyle.top, '/', modalStyle.left);
+      console.log('[VTON] Content dimensiones:', content ? (content.offsetWidth + 'x' + content.offsetHeight) : 'no content');
+      console.log('[VTON] Content opacity:', contentStyle ? contentStyle.opacity : 'N/A');
+      console.log('[VTON] Content visibility:', contentStyle ? contentStyle.visibility : 'N/A');
+      console.log('[VTON] Content width (computado):', contentStyle ? contentStyle.width : 'N/A');
+      console.log('[VTON] Content height (computado):', contentStyle ? contentStyle.height : 'N/A');
+      console.log('[VTON] Content min-height (computado):', contentStyle ? contentStyle.minHeight : 'N/A');
+      console.log('[VTON] Content display (computado):', contentStyle ? contentStyle.display : 'N/A');
+
+      // Diagnóstico específico si display es none - SOLUCIÓN NUCLEAR
+      if (content && contentStyle && contentStyle.display === 'none') {
+        console.log('[VTON] ⚠️ PROBLEMA CRÍTICO: display:none persiste con !important inline');
+        console.log('[VTON] Clase original:', content.className);
+
+        // SOLUCIÓN NUCLEAR: Eliminar clase conflictiva
+        console.log('[VTON] 🚨 Aplicando solución nuclear - removiendo clases...');
+        content.className = '';
+
+        // Reaplicar TODOS los estilos con setAttribute - CENTRADO ABSOLUTO
+        content.setAttribute('style', `
+          display: block !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+          position: fixed !important;
+          background: rgb(255, 255, 255) !important;
+          color: rgb(0, 0, 0) !important;
+          z-index: 2147483647 !important;
+          width: 450px !important;
+          max-width: calc(100vw - 32px) !important;
+          min-height: 500px !important;
+          border-radius: 16px !important;
+          padding: 24px !important;
+          max-height: calc(100vh - 40px) !important;
+          overflow-y: auto !important;
+          box-sizing: border-box !important;
+          left: 50% !important;
+          top: 50% !important;
+          transform: translate(-50%, -50%) !important;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+        `);
+
+        // Forzar hijos también
+        const header = content.querySelector('.stilaro-vton-header');
+        const tabs = content.querySelector('.stilaro-vton-tabs');
+        const body = content.querySelector('.stilaro-vton-body');
+
+        if (header) header.setAttribute('style', 'display: block !important; visibility: visible !important;');
+        if (tabs) tabs.setAttribute('style', 'display: flex !important; visibility: visible !important;');
+        if (body) body.setAttribute('style', 'display: block !important; visibility: visible !important; min-height: 300px !important;');
+
+        // Verificar después de 100ms
+        setTimeout(() => {
+          const final = getComputedStyle(content);
+          console.log('[VTON] ✅ Display FINAL:', final.display);
+          console.log('[VTON] ✅ Dimensiones:', content.offsetWidth + 'x' + content.offsetHeight);
+          console.log('[VTON] ✅ Z-index content:', final.zIndex);
+          console.log('[VTON] ✅ Position content:', final.position);
+
+          // Verificar si hay elementos tapando el modal
+          const modalRect = content.getBoundingClientRect();
+          const centerX = modalRect.left + modalRect.width / 2;
+          const centerY = modalRect.top + modalRect.height / 2;
+          const elementAtCenter = document.elementFromPoint(centerX, centerY);
+
+          if (elementAtCenter && !content.contains(elementAtCenter) && elementAtCenter !== content) {
+            console.warn('[VTON] ⚠️ HAY UN ELEMENTO TAPANDO EL MODAL:');
+            console.warn('[VTON]   Tag:', elementAtCenter.tagName);
+            console.warn('[VTON]   ID:', elementAtCenter.id);
+            console.warn('[VTON]   Classes:', elementAtCenter.className);
+            console.warn('[VTON]   Z-index:', getComputedStyle(elementAtCenter).zIndex);
+
+            // Intentar bajar el z-index del elemento que tapa
+            const blockingZIndex = parseInt(getComputedStyle(elementAtCenter).zIndex);
+            if (!isNaN(blockingZIndex) && blockingZIndex >= 2147483647) {
+              elementAtCenter.style.setProperty('z-index', '999998', 'important');
+              console.log('[VTON] 🛡️ Z-index del elemento bloqueante reducido a 999998');
+            }
+          } else {
+            console.log('[VTON] ✅ No hay elementos tapando el modal');
+          }
+
+          // Si aún no funciona, usar MutationObserver
+          if (final.display === 'none') {
+            console.error('[VTON] 💀 JS externo está manipulando estilos - activando MutationObserver');
+            const observer = new MutationObserver(() => {
+              if (getComputedStyle(content).display === 'none') {
+                content.style.setProperty('display', 'block', 'important');
+              }
+            });
+            observer.observe(content, { attributes: true, attributeFilter: ['style', 'class'] });
+          }
+        }, 100);
+      }
+
+      // Buscar elementos que puedan estar encima del modal
+      console.log('[VTON] ===== OTROS ELEMENTOS CON Z-INDEX ALTO =====');
+      const allElements = document.querySelectorAll('*');
+      const highZElements = Array.from(allElements)
+        .filter(el => {
+          const z = parseInt(getComputedStyle(el).zIndex);
+          return !isNaN(z) && z > 1000000;
+        })
+        .map(el => ({
+          tag: el.tagName,
+          id: el.id,
+          classes: el.className,
+          zIndex: getComputedStyle(el).zIndex,
+          position: getComputedStyle(el).position
+        }));
+
+      if (highZElements.length > 0) {
+        console.log('[VTON] 🔍 Elementos con z-index > 1000000:');
+        highZElements.forEach((el, i) => {
+          const classStr = el.classes ? ` classes="${el.classes.split(' ').slice(0, 3).join(' ')}"` : '';
+          console.log(`  ${i + 1}. ${el.tag}${el.id ? '#' + el.id : ''}${classStr} - z-index: ${el.zIndex}, position: ${el.position}`);
+        });
+
+        // Si hay elementos externos, BAJARLOS inmediatamente
+        const nonModalElements = highZElements.filter(el => el.id !== 'stilaro-vton-modal');
+        if (nonModalElements.length > 0) {
+          console.warn('[VTON] ⚠️ Encontrados', nonModalElements.length, 'elementos externos - BAJANDO z-index AGRESIVAMENTE...');
+        }
+
+        // ESTRATEGIA MEGA-NUCLEAR: Iterar sobre TODOS los elementos y bajar CUALQUIERA con z-index >= 1
+        let reducedCount = 0;
+        allElements.forEach(el => {
+          const z = parseInt(getComputedStyle(el).zIndex);
+          // Reducir ABSOLUTAMENTE CUALQUIER elemento con z-index positivo (excepto el modal y sus hijos)
+          if (!isNaN(z) && z >= 1 && el.id !== 'stilaro-vton-modal' && !modal.contains(el)) {
+            // Resetear a auto para que no interfiera
+            el.style.setProperty('z-index', 'auto', 'important');
+            reducedCount++;
+            if (reducedCount <= 10) { // Logear primeros 10 para diagnóstico
+              console.log('[VTON] 🛡️ Z-index reseteado a auto:', el.tagName, el.id || el.className || '(sin id/clase)', 'de', z);
+            }
+          }
+        });
+
+        if (reducedCount > 0) {
+          console.log('[VTON] ✅', reducedCount, 'elementos externos neutralizados ULTRA-AGRESIVAMENTE');
+        }
+      } else {
+        console.log('[VTON] No hay otros elementos con z-index mayor a 1000000');
+      }
+
+      // BAJAR z-index de TODOS los padres del modal (no elevarlos)
+      // Esto evita que un padre con z-index alto cree un stacking context compartido con la foto
+      let parent = modal.parentElement;
+      while (parent && parent !== document.body) {
+        const parentZ = parseInt(getComputedStyle(parent).zIndex);
+        if (!isNaN(parentZ) && parentZ !== 0) {
+          parent.style.setProperty('z-index', 'auto', 'important');
+          console.log('[VTON] ⚠️ Z-index del padre', parent.tagName, 'reseteado a auto (era', parentZ + ')');
+        }
+        parent = parent.parentElement;
+      }
+
+      // Verificar si el modal está en el DOM
+      console.log('[VTON] Modal en DOM:', document.body.contains(modal));
+      console.log('[VTON] Parent del modal:', modal.parentElement?.tagName);
+
+      // Verificar contenido interno y dimensiones de cada hijo
+      if (content) {
+        const header = content.querySelector('.stilaro-vton-header');
+        const tabsContainer = content.querySelector('.stilaro-vton-tabs');
+        const tabs = content.querySelectorAll('.stilaro-tab');
+        const body = content.querySelector('.stilaro-vton-body');
+        const closeBtn = content.querySelector('.stilaro-vton-close');
+
+        console.log('[VTON] ===== ELEMENTOS HIJOS =====');
+        console.log('[VTON] Header existe:', !!header, header ? `(${header.offsetWidth}x${header.offsetHeight})` : '');
+        console.log('[VTON] Header display:', header ? getComputedStyle(header).display : 'N/A');
+        console.log('[VTON] Tabs container:', !!tabsContainer, tabsContainer ? `(${tabsContainer.offsetWidth}x${tabsContainer.offsetHeight})` : '');
+        console.log('[VTON] Tabs encontradas:', tabs.length);
+        console.log('[VTON] Body existe:', !!body, body ? `(${body.offsetWidth}x${body.offsetHeight})` : '');
+        console.log('[VTON] Body display:', body ? getComputedStyle(body).display : 'N/A');
+        console.log('[VTON] Close button:', !!closeBtn, closeBtn ? `(${closeBtn.offsetWidth}x${closeBtn.offsetHeight})` : '');
+        console.log('[VTON] Primer hijo:', content.firstElementChild?.tagName);
+        console.log('[VTON] Total hijos:', content.children.length);
+      }
+
+      // Verificar si hay scroll en body que pueda ocultar el modal
+      const bodyStyle = getComputedStyle(document.body);
+      console.log('[VTON] Body overflow:', bodyStyle.overflow);
+      console.log('[VTON] HTML overflow:', getComputedStyle(document.documentElement).overflow);
+    }
+  }
+
   // Inicializar
   function init() {
+    // CRÍTICO: Mover el modal al body INMEDIATAMENTE
+    if (modal && modal.parentElement !== document.body) {
+      console.warn('[VTON] 🚀 INIT: Modal NO está en body - MOVIENDOLO...');
+      console.log('[VTON] Padre actual:', modal.parentElement?.tagName);
+      document.body.appendChild(modal);
+      console.log('[VTON] ✅ INIT: Modal movido a body');
+    }
+
     // Generar/obtener IDs
     visitorId = generateVisitorId();
     shopDomain = getShopDomain();
@@ -760,6 +1084,40 @@
 
     // Detect theme colors for adaptive styling
     detectThemeColors();
+
+    // DEFENSA CONTINUA: Verificar cada segundo que el modal esté en body
+    setInterval(() => {
+      if (modal && modal.parentElement !== document.body) {
+        console.warn('[VTON] ⚠️ DEFENSA: Modal fuera de body - reubicando...');
+        document.body.appendChild(modal);
+        console.log('[VTON] ✅ DEFENSA: Modal reubicado en body');
+      }
+    }, 1000);
+
+    // ==================== FOTO GLOBAL ====================
+    globalUploadArea?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!isFileDialogOpen && e.target !== globalPhotoInput) {
+        isFileDialogOpen = true;
+        globalPhotoInput?.click();
+      }
+    });
+    globalUploadArea?.addEventListener('dragover', handleDragOver);
+    globalUploadArea?.addEventListener('drop', handleGlobalDrop);
+    globalPhotoInput?.addEventListener('change', (e) => {
+      isFileDialogOpen = false;
+      handleGlobalPhotoSelect(e);
+    });
+    globalPhotoInput?.addEventListener('cancel', () => {
+      isFileDialogOpen = false;
+    });
+    globalPhotoChange?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!isFileDialogOpen) {
+        isFileDialogOpen = true;
+        globalPhotoInput?.click();
+      }
+    });
 
     // Botones de apertura del modal
     document.querySelectorAll('.stilaro-vton-button').forEach(btn => {
@@ -992,8 +1350,17 @@
     reader.readAsDataURL(file);
   }
 
-  // Mostrar paso de subir foto (después de seleccionar outfit)
+  // Mostrar paso de confirmación de outfit (después de seleccionar prendas)
   function showOutfitPhotoUpload() {
+    // Si hay foto global, generar directamente
+    if (globalUserPhotoBase64) {
+      outfitUserPhotoBase64 = globalUserPhotoBase64;
+      console.log('[VTON] Usando foto global para outfit, generando automáticamente...');
+      generateOutfitTryOn(selectedOutfitItems.length === 0);
+      return;
+    }
+
+    // No hay foto global, mostrar mensaje de que necesita subir foto
     showOutfitStep(outfitUpload);
 
     // Mostrar preview de las prendas seleccionadas
@@ -1006,11 +1373,13 @@
       uploadPreview.innerHTML = html;
     }
 
-    // Reset el área de upload
-    if (outfitUploadArea) outfitUploadArea.style.display = 'block';
-    if (outfitUserPreview) outfitUserPreview.style.display = 'none';
+    // Mostrar mensaje de necesita foto, ocultar botón
+    const outfitNeedPhotoMsg = document.getElementById('stilaro-outfit-need-photo-msg');
+    if (outfitNeedPhotoMsg) outfitNeedPhotoMsg.style.display = 'block';
+    if (outfitContinueBtn) outfitContinueBtn.style.display = 'none';
+
     if (outfitPhotoInput) outfitPhotoInput.value = '';
-    isFileDialogOpen = false; // Reset bandera
+    isFileDialogOpen = false;
   }
 
   async function showOutfitRecommendations() {
@@ -1095,9 +1464,14 @@
         <div class="stilaro-recommendation-category">
           <h4>${category}</h4>
           <div class="stilaro-recommendation-items">
-            ${products.map(p => `
+            ${products.map(p => {
+              // Obtener el variant_id de la primera variante disponible
+              const availableVariant = p.variants?.find(v => v.available) || p.variants?.[0];
+              const variantId = availableVariant?.id || '';
+              return `
               <div class="stilaro-recommendation-item"
                    data-product-id="${p.id}"
+                   data-variant-id="${variantId}"
                    data-product-image="${p.images[0]?.src || ''}"
                    data-product-title="${p.title}"
                    data-product-type="${p.product_type}"
@@ -1110,7 +1484,7 @@
                 ${p.colorScore >= 80 ? `<span class="item-score">${p.colorScore}%</span>` : ''}
                 <span class="item-check">✓</span>
               </div>
-            `).join('')}
+            `}).join('')}
           </div>
         </div>
       `;
@@ -1151,6 +1525,7 @@
       // Seleccionar nueva
       selectedOutfitItems.push({
         id: productId,
+        variantId: element.dataset.variantId,
         image: element.dataset.productImage,
         title: element.dataset.productTitle,
         outfitType: outfitType
@@ -1291,17 +1666,22 @@
   }
 
   function resetToOutfitUpload() {
-    outfitUserPhotoBase64 = null;
     selectedOutfitItems = [];
 
-    if (outfitUserPreview) {
-      outfitUserPreview.src = '';
-      outfitUserPreview.style.display = 'none';
-    }
-    if (outfitUploadArea) outfitUploadArea.style.display = 'block';
-    if (outfitContinueBtn) outfitContinueBtn.style.display = 'none';
-    if (outfitPhotoInput) outfitPhotoInput.value = '';
+    const outfitNeedPhotoMsg = document.getElementById('stilaro-outfit-need-photo-msg');
 
+    // Si hay foto global, usarla
+    if (globalUserPhotoBase64) {
+      outfitUserPhotoBase64 = globalUserPhotoBase64;
+      if (outfitNeedPhotoMsg) outfitNeedPhotoMsg.style.display = 'none';
+      if (outfitContinueBtn) outfitContinueBtn.style.display = 'block';
+    } else {
+      outfitUserPhotoBase64 = null;
+      if (outfitNeedPhotoMsg) outfitNeedPhotoMsg.style.display = 'block';
+      if (outfitContinueBtn) outfitContinueBtn.style.display = 'none';
+    }
+
+    if (outfitPhotoInput) outfitPhotoInput.value = '';
     showOutfitStep(outfitUpload);
   }
 
@@ -1356,28 +1736,42 @@
   }
 
   function addOutfitToCart() {
-    if (!currentProduct) return;
+    if (!currentProduct || !currentProduct.variantId) {
+      console.error('[VTON] No hay producto o variantId');
+      alert('Error: No se pudo añadir al carrito');
+      return;
+    }
 
-    // Añadir todas las prendas del outfit
-    const items = [{ id: currentProduct.id, quantity: 1 }];
+    // Añadir todas las prendas del outfit usando variantId
+    const items = [{ id: parseInt(currentProduct.variantId), quantity: 1 }];
 
     selectedOutfitItems.forEach(item => {
-      items.push({ id: item.id, quantity: 1 });
+      if (item.variantId) {
+        items.push({ id: parseInt(item.variantId), quantity: 1 });
+      }
     });
+
+    console.log('[VTON] Añadiendo al carrito:', items);
 
     fetch('/cart/add.js', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ items })
     })
-      .then(response => response.json())
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Error en la respuesta del servidor');
+        }
+        return response.json();
+      })
       .then(data => {
+        console.log('[VTON] Añadido al carrito:', data);
         closeModal();
         window.location.href = '/cart';
       })
       .catch(error => {
-        console.error('Error adding outfit to cart:', error);
-        alert('Error al añadir al carrito');
+        console.error('[VTON] Error adding outfit to cart:', error);
+        alert('Error al añadir al carrito. Por favor, inténtalo de nuevo.');
       });
   }
 
@@ -1485,16 +1879,22 @@
   }
 
   function showSizingUpload() {
-    // Reset
-    sizingUserPhotoBase64 = null;
+    // Reset analysis pero mantener foto si hay global
     sizingData.analysis = null;
 
-    if (sizingUserPreview) {
-      sizingUserPreview.src = '';
-      sizingUserPreview.style.display = 'none';
+    const sizingNeedPhotoMsg = document.getElementById('stilaro-sizing-need-photo-msg');
+
+    // Si hay foto global, usarla
+    if (globalUserPhotoBase64) {
+      sizingUserPhotoBase64 = globalUserPhotoBase64;
+      if (sizingNeedPhotoMsg) sizingNeedPhotoMsg.style.display = 'none';
+      if (sizingContinueBtn) sizingContinueBtn.style.display = 'block';
+    } else {
+      sizingUserPhotoBase64 = null;
+      if (sizingNeedPhotoMsg) sizingNeedPhotoMsg.style.display = 'block';
+      if (sizingContinueBtn) sizingContinueBtn.style.display = 'none';
     }
-    if (sizingUploadArea) sizingUploadArea.style.display = 'block';
-    if (sizingContinueBtn) sizingContinueBtn.style.display = 'none';
+
     if (sizingPhotoInput) sizingPhotoInput.value = '';
 
     // Mostrar info del producto
@@ -1801,7 +2201,6 @@
   }
 
   function resetSizingState() {
-    sizingUserPhotoBase64 = null;
     sizingData = {
       height: null,
       fit_preference: 'regular',
@@ -1810,13 +2209,19 @@
       analysis: null
     };
 
-    // Reset UI
-    if (sizingUserPreview) {
-      sizingUserPreview.src = '';
-      sizingUserPreview.style.display = 'none';
+    const sizingNeedPhotoMsg = document.getElementById('stilaro-sizing-need-photo-msg');
+
+    // Si hay foto global, usarla
+    if (globalUserPhotoBase64) {
+      sizingUserPhotoBase64 = globalUserPhotoBase64;
+      if (sizingNeedPhotoMsg) sizingNeedPhotoMsg.style.display = 'none';
+      if (sizingContinueBtn) sizingContinueBtn.style.display = 'block';
+    } else {
+      sizingUserPhotoBase64 = null;
+      if (sizingNeedPhotoMsg) sizingNeedPhotoMsg.style.display = 'block';
+      if (sizingContinueBtn) sizingContinueBtn.style.display = 'none';
     }
-    if (sizingUploadArea) sizingUploadArea.style.display = 'block';
-    if (sizingContinueBtn) sizingContinueBtn.style.display = 'none';
+
     if (sizingPhotoInput) sizingPhotoInput.value = '';
 
     // Reset form values
@@ -1843,6 +2248,7 @@
     const btn = e.currentTarget;
     currentProduct = {
       id: btn.dataset.productId,
+      variantId: btn.dataset.variantId,
       title: btn.dataset.productTitle,
       image: btn.dataset.productImage,
       price: btn.dataset.productPrice,
@@ -1873,6 +2279,9 @@
     // Mostrar modal centrado (sin bloquear scroll de la página)
     if (modal) {
       modal.classList.add('stilaro-active');
+
+      // Posicionar modal sobre el botón
+      positionModalOverButton(btn);
     }
 
     // Re-detect theme colors in case styles loaded dynamically
@@ -1895,17 +2304,178 @@
       // Tienda activa, mostrar estado habilitado
       showEnabledState(shopStatus);
     }
+
+    // DEFENSA CONTINUA: MutationObserver para proteger z-index del modal
+    const zIndexObserver = new MutationObserver(() => {
+      // Proteger z-index del modal
+      const modalZ = parseInt(getComputedStyle(modal).zIndex);
+      if (isNaN(modalZ) || modalZ < 2147483647) {
+        modal.style.setProperty('z-index', '2147483647', 'important');
+        console.log('[VTON] 🛡️ Z-index del modal restaurado a máximo');
+      }
+
+      // Reducir z-index de elementos externos que intenten subir (MEGA-AGRESIVO)
+      const allElements = document.querySelectorAll('*');
+      allElements.forEach(el => {
+        if (el.id !== 'stilaro-vton-modal' && !modal.contains(el)) {
+          const z = parseInt(getComputedStyle(el).zIndex);
+          // Resetear CUALQUIER z-index >= 1
+          if (!isNaN(z) && z >= 1) {
+            el.style.setProperty('z-index', 'auto', 'important');
+            console.log('[VTON] 🛡️ Z-index externo reseteado a auto:', el.tagName);
+          }
+        }
+      });
+    });
+
+    // Observar cambios en todo el documento
+    zIndexObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['style', 'class'],
+      subtree: true,
+      childList: true
+    });
+
+    // Guardar observer para poder desconectarlo al cerrar
+    if (!window.stilaroZIndexObserver) {
+      window.stilaroZIndexObserver = zIndexObserver;
+    }
   }
 
   function closeModal() {
     if (modal) {
       modal.classList.remove('stilaro-active');
+      // Limpiar estilos inline de respaldo
+      modal.style.display = '';
     }
-    userPhotoBase64 = null;
+
+    // Desconectar observer de z-index
+    if (window.stilaroZIndexObserver) {
+      window.stilaroZIndexObserver.disconnect();
+      window.stilaroZIndexObserver = null;
+      console.log('[VTON] 🛡️ Z-index observer desconectado');
+    }
+
+    // Resetear foto global y todas las individuales
+    resetGlobalPhoto();
     shopStatus = null;
     isFileDialogOpen = false;
   }
 
+  // ========================================
+  // FOTO GLOBAL - Funciones
+  // ========================================
+  function handleGlobalDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (globalUploadArea) globalUploadArea.style.borderStyle = 'solid';
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      processGlobalPhoto(files[0]);
+    }
+  }
+
+  function handleGlobalPhotoSelect(e) {
+    const files = e.target.files;
+    if (files.length > 0) {
+      processGlobalPhoto(files[0]);
+    }
+  }
+
+  function processGlobalPhoto(file) {
+    // Validar tipo
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor, selecciona una imagen');
+      return;
+    }
+
+    // Validar tamano (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('La imagen es demasiado grande. Máximo 5MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      globalUserPhotoBase64 = e.target.result;
+
+      // Sincronizar con las 3 pestañas
+      userPhotoBase64 = globalUserPhotoBase64;
+      outfitUserPhotoBase64 = globalUserPhotoBase64;
+      sizingUserPhotoBase64 = globalUserPhotoBase64;
+
+      // Mostrar preview global
+      if (globalPhotoImg) {
+        globalPhotoImg.src = globalUserPhotoBase64;
+      }
+      if (globalUploadArea) globalUploadArea.style.display = 'none';
+      if (globalPhotoPreview) globalPhotoPreview.style.display = 'flex';
+
+      // Ocultar zonas de upload individuales y mostrar previews
+      updateTabsWithGlobalPhoto();
+
+      console.log('[VTON] Foto global cargada y sincronizada con todas las pestañas');
+    };
+    reader.onerror = () => {
+      alert('Error al leer la imagen. Por favor, inténtalo de nuevo.');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function updateTabsWithGlobalPhoto() {
+    // Mensajes de "necesita foto"
+    const needPhotoMsg = document.getElementById('stilaro-need-photo-msg');
+    const sizingNeedPhotoMsg = document.getElementById('stilaro-sizing-need-photo-msg');
+    const outfitNeedPhotoMsg = document.getElementById('stilaro-outfit-need-photo-msg');
+
+    // Tab 1: Single - Ocultar mensaje, mostrar botón
+    if (needPhotoMsg) needPhotoMsg.style.display = 'none';
+    if (tryOnBtn) tryOnBtn.style.display = 'block';
+    hideUsageInfo();
+
+    // Tab 2: Outfit - Ocultar mensaje, mostrar botón
+    if (outfitNeedPhotoMsg) outfitNeedPhotoMsg.style.display = 'none';
+    if (outfitContinueBtn) outfitContinueBtn.style.display = 'block';
+
+    // Tab 3: Sizing - Ocultar mensaje, mostrar botón
+    if (sizingNeedPhotoMsg) sizingNeedPhotoMsg.style.display = 'none';
+    if (sizingContinueBtn) sizingContinueBtn.style.display = 'block';
+
+    console.log('[VTON] Foto global aplicada a todas las pestañas');
+  }
+
+  function resetGlobalPhoto() {
+    globalUserPhotoBase64 = null;
+    userPhotoBase64 = null;
+    outfitUserPhotoBase64 = null;
+    sizingUserPhotoBase64 = null;
+
+    // Mostrar upload global, ocultar preview
+    if (globalUploadArea) globalUploadArea.style.display = 'block';
+    if (globalPhotoPreview) globalPhotoPreview.style.display = 'none';
+
+    // Mensajes de "necesita foto"
+    const needPhotoMsg = document.getElementById('stilaro-need-photo-msg');
+    const sizingNeedPhotoMsg = document.getElementById('stilaro-sizing-need-photo-msg');
+    const outfitNeedPhotoMsg = document.getElementById('stilaro-outfit-need-photo-msg');
+
+    // Tab 1: Mostrar mensaje, ocultar botón
+    if (needPhotoMsg) needPhotoMsg.style.display = 'block';
+    if (tryOnBtn) tryOnBtn.style.display = 'none';
+
+    // Tab 2: Mostrar mensaje, ocultar botón
+    if (outfitNeedPhotoMsg) outfitNeedPhotoMsg.style.display = 'block';
+    if (outfitContinueBtn) outfitContinueBtn.style.display = 'none';
+
+    // Tab 3: Mostrar mensaje, ocultar botón
+    if (sizingNeedPhotoMsg) sizingNeedPhotoMsg.style.display = 'block';
+    if (sizingContinueBtn) sizingContinueBtn.style.display = 'none';
+  }
+
+  // ========================================
+  // DRAG & DROP - Tab 1 Single
+  // ========================================
   function handleDragOver(e) {
     e.preventDefault();
     e.stopPropagation();
@@ -2046,36 +2616,46 @@
   }
 
   function resetToUpload() {
-    userPhotoBase64 = null;
-
     // Ocultar mensaje de estado
     const statusMsg = document.getElementById('stilaro-status-message');
     if (statusMsg) {
       statusMsg.style.display = 'none';
     }
 
-    if (userPreview) {
-      userPreview.src = '';
-      userPreview.style.display = 'none';
-    }
-    if (uploadArea) uploadArea.style.display = 'block';
-    if (tryOnBtn) tryOnBtn.style.display = 'none';
-    if (photoInput) photoInput.value = '';
+    const needPhotoMsg = document.getElementById('stilaro-need-photo-msg');
 
+    // Si hay foto global, usarla
+    if (globalUserPhotoBase64) {
+      userPhotoBase64 = globalUserPhotoBase64;
+      if (needPhotoMsg) needPhotoMsg.style.display = 'none';
+      if (tryOnBtn) tryOnBtn.style.display = 'block';
+    } else {
+      userPhotoBase64 = null;
+      if (needPhotoMsg) needPhotoMsg.style.display = 'block';
+      if (tryOnBtn) tryOnBtn.style.display = 'none';
+    }
+
+    if (photoInput) photoInput.value = '';
     hideUsageInfo();
     showStep(stepUpload);
   }
 
   function addToCart() {
-    if (!currentProduct) return;
+    if (!currentProduct || !currentProduct.variantId) {
+      console.error('[VTON] No hay producto o variantId');
+      alert('Error: No se pudo añadir al carrito');
+      return;
+    }
 
-    // Usar la API de Shopify para anadir al carrito
+    // Usar la API de Shopify para anadir al carrito con variantId
     const formData = {
       items: [{
-        id: currentProduct.id,
+        id: parseInt(currentProduct.variantId),
         quantity: 1
       }]
     };
+
+    console.log('[VTON] Añadiendo al carrito:', formData);
 
     fetch('/cart/add.js', {
       method: 'POST',
@@ -2084,15 +2664,20 @@
       },
       body: JSON.stringify(formData)
     })
-      .then(response => response.json())
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Error en la respuesta del servidor');
+        }
+        return response.json();
+      })
       .then(data => {
+        console.log('[VTON] Añadido al carrito:', data);
         closeModal();
-        // Opcional: Redirigir al carrito o mostrar notificacion
         window.location.href = '/cart';
       })
       .catch(error => {
-        console.error('Error adding to cart:', error);
-        alert('Error al anadir al carrito');
+        console.error('[VTON] Error adding to cart:', error);
+        alert('Error al añadir al carrito. Por favor, inténtalo de nuevo.');
       });
   }
 

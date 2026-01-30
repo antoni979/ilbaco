@@ -7,6 +7,7 @@
   <button
     class="stilaro-vton-button"
     data-product-id="{{ product.id }}"
+    data-variant-id="{{ product.selected_or_first_available_variant.id }}"
     data-product-title="{{ product.title | escape }}"
     data-product-image="{{ product.featured_image | image_url: width: 800 }}"
     data-product-price="{{ product.price | money }}"
@@ -33,12 +34,39 @@
 <!-- Modal del Probador Virtual -->
 <div id="stilaro-vton-modal" class="stilaro-vton-modal">
   <div class="stilaro-vton-modal-overlay"></div>
-  <div class="stilaro-vton-modal-content">
+  <div class="stilaro-vton-modal-content" style="display: block !important; visibility: visible !important; opacity: 1 !important;">
     <button class="stilaro-vton-close">&times;</button>
 
     <div class="stilaro-vton-header">
       <h2>{{ block.settings.modal_title }}</h2>
       <p>{{ block.settings.modal_subtitle }}</p>
+    </div>
+
+    <!-- Zona de foto global (compartida entre pestañas) -->
+    <div class="stilaro-global-photo-section" id="stilaro-global-photo-section">
+      <div class="stilaro-global-upload-area" id="stilaro-global-upload-area">
+        <input type="file" id="stilaro-global-photo-input" accept="image/*" style="display: none;">
+        <div class="stilaro-global-upload-content">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="8" r="4"/>
+            <path d="M20 21a8 8 0 0 0-16 0"/>
+          </svg>
+          <p>Sube tu foto</p>
+          <span>Se usará para todas las funciones</span>
+        </div>
+      </div>
+
+      <div class="stilaro-global-photo-preview" id="stilaro-global-photo-preview" style="display: none;">
+        <img id="stilaro-global-photo-img" src="" alt="Tu foto">
+        <button class="stilaro-global-photo-change" id="stilaro-global-photo-change">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          Cambiar foto
+        </button>
+      </div>
     </div>
 
     <!-- Pestañas -->
@@ -49,27 +77,22 @@
     </div>
 
     <div class="stilaro-vton-body">
-      <!-- Paso 1: Subir foto -->
+      <!-- Paso 1: Probar prenda (usa foto global) -->
       <div class="stilaro-vton-step" id="stilaro-step-upload">
         <div class="stilaro-vton-product-preview">
           <img id="stilaro-product-image" src="" alt="Producto" width="60" height="60">
           <span id="stilaro-product-title"></span>
         </div>
 
-        <div class="stilaro-vton-upload-area" id="stilaro-upload-area">
-          <input type="file" id="stilaro-photo-input" accept="image/*" style="display: none;">
-          <div class="stilaro-vton-upload-content">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="17 8 12 3 7 8"/>
-              <line x1="12" y1="3" x2="12" y2="15"/>
-            </svg>
-            <p>Sube tu foto o arrastra aquí</p>
-            <span>JPG, PNG (max 5MB)</span>
-          </div>
+        <!-- Mensaje si no hay foto -->
+        <div class="stilaro-need-photo-msg" id="stilaro-need-photo-msg">
+          <p>Sube tu foto arriba para probar esta prenda</p>
         </div>
 
-        <img id="stilaro-user-preview" src="" alt="Tu foto" width="300" height="400" style="display: none;">
+        <!-- Input oculto para compatibilidad -->
+        <input type="file" id="stilaro-photo-input" accept="image/*" style="display: none;">
+        <div id="stilaro-upload-area" style="display: none;"></div>
+        <img id="stilaro-user-preview" src="" alt="Tu foto" style="display: none;">
 
         <button id="stilaro-try-on-btn" class="stilaro-vton-primary-btn" style="display: none;">
           Probar prenda
@@ -117,7 +140,7 @@
       <!-- TAB 3: CALCULADOR DE TALLAS -->
       <!-- ==================== -->
 
-      <!-- Paso 1 Sizing: Subir foto -->
+      <!-- Paso 1 Sizing: Info y botón (usa foto global) -->
       <div class="stilaro-vton-step stilaro-sizing-step" id="stilaro-sizing-upload" style="display: none;">
         <div class="stilaro-vton-product-preview">
           <img id="stilaro-sizing-product-image" src="" alt="Producto" width="60" height="60">
@@ -125,26 +148,21 @@
         </div>
 
         <div class="stilaro-sizing-intro">
-          <p>Sube una foto de cuerpo completo para analizar tu complexión y recomendarte la talla perfecta.</p>
+          <p>Analizaremos tu complexión con la foto que subiste para recomendarte la talla perfecta.</p>
         </div>
 
-        <div class="stilaro-vton-upload-area" id="stilaro-sizing-upload-area">
-          <input type="file" id="stilaro-sizing-photo-input" accept="image/*" style="display: none;">
-          <div class="stilaro-vton-upload-content">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="17 8 12 3 7 8"/>
-              <line x1="12" y1="3" x2="12" y2="15"/>
-            </svg>
-            <p>Sube tu foto de cuerpo completo</p>
-            <span>JPG, PNG (max 5MB)</span>
-          </div>
+        <!-- Mensaje si no hay foto -->
+        <div class="stilaro-need-photo-msg" id="stilaro-sizing-need-photo-msg">
+          <p>Sube tu foto arriba para calcular tu talla</p>
         </div>
 
+        <!-- Inputs ocultos para compatibilidad -->
+        <input type="file" id="stilaro-sizing-photo-input" accept="image/*" style="display: none;">
+        <div id="stilaro-sizing-upload-area" style="display: none;"></div>
         <img id="stilaro-sizing-user-preview" src="" alt="Tu foto" style="display: none;">
 
         <button id="stilaro-sizing-continue-btn" class="stilaro-vton-primary-btn" style="display: none;">
-          Continuar
+          Calcular mi talla
         </button>
       </div>
 
@@ -261,31 +279,25 @@
       <!-- TAB 2: COMPLETAR LOOK -->
       <!-- ==================== -->
 
-      <!-- Paso Outfit: Subir foto (después de seleccionar prendas) -->
+      <!-- Paso Outfit: Confirmación (usa foto global) -->
       <div class="stilaro-vton-step stilaro-outfit-step" id="stilaro-outfit-upload" style="display: none;">
         <div class="stilaro-outfit-selected-summary" id="stilaro-outfit-selected-summary">
           <p><strong>Tu outfit seleccionado:</strong></p>
           <div class="outfit-preview" id="stilaro-outfit-upload-preview"></div>
         </div>
 
-        <div class="stilaro-vton-upload-area" id="stilaro-outfit-upload-area">
-          <input type="file" id="stilaro-outfit-photo-input" accept="image/*" style="display: none;">
-          <div class="stilaro-vton-upload-content">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="17 8 12 3 7 8"/>
-              <line x1="12" y1="3" x2="12" y2="15"/>
-            </svg>
-            <p>Sube tu foto para probarte el outfit</p>
-            <span>JPG, PNG (max 5MB)</span>
-          </div>
+        <!-- Mensaje si no hay foto -->
+        <div class="stilaro-need-photo-msg" id="stilaro-outfit-need-photo-msg">
+          <p>Sube tu foto arriba para probarte el outfit</p>
         </div>
 
+        <!-- Inputs ocultos para compatibilidad -->
+        <input type="file" id="stilaro-outfit-photo-input" accept="image/*" style="display: none;">
+        <div id="stilaro-outfit-upload-area" style="display: none;"></div>
         <img id="stilaro-outfit-user-preview" src="" alt="Tu foto" style="display: none;">
 
-        <!-- Hidden, VTON se genera automáticamente después de subir foto -->
         <button id="stilaro-outfit-continue-btn" class="stilaro-vton-primary-btn" style="display: none;">
-          Generar
+          Generar look
         </button>
       </div>
 
@@ -433,6 +445,34 @@
     display: flex !important;
   }
 
+  /* Forzar visibilidad del contenido con selector de alta especificidad */
+  #stilaro-vton-modal.stilaro-active > .stilaro-vton-modal-content {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  /* Forzar visibilidad de elementos internos críticos */
+  #stilaro-vton-modal.stilaro-active .stilaro-vton-header {
+    display: block !important;
+    visibility: visible !important;
+  }
+
+  #stilaro-vton-modal.stilaro-active .stilaro-vton-tabs {
+    display: flex !important;
+    visibility: visible !important;
+  }
+
+  #stilaro-vton-modal.stilaro-active .stilaro-vton-body {
+    display: block !important;
+    visibility: visible !important;
+  }
+
+  #stilaro-vton-modal.stilaro-active .stilaro-vton-close {
+    display: flex !important;
+    visibility: visible !important;
+  }
+
   .stilaro-vton-modal-overlay {
     position: fixed !important;
     top: 0 !important;
@@ -442,7 +482,7 @@
     width: 100vw !important;
     height: 100vh !important;
     height: 100dvh !important;
-    background: rgba(0, 0, 0, 0.5) !important;
+    background-color: rgba(0, 0, 0, 0.5) !important;
     pointer-events: auto !important;
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
@@ -455,12 +495,17 @@
   }
 
   .stilaro-vton-modal-content {
+    display: block !important;
     position: relative !important;
-    background: var(--stilaro-bg) !important;
-    color: var(--stilaro-text) !important;
+    /* Fallback sólido por si las variables CSS no funcionan */
+    background: #ffffff !important;
+    background: var(--stilaro-bg, #ffffff) !important;
+    color: #121212 !important;
+    color: var(--stilaro-text, #121212) !important;
     border-radius: var(--stilaro-radius-xl) !important;
     width: calc(100% - 32px) !important;
     max-width: 480px !important;
+    min-height: 400px !important;
     max-height: calc(100vh - 40px) !important;
     max-height: calc(100dvh - 40px) !important;
     overflow-y: auto !important;
@@ -539,6 +584,7 @@
   /* HEADER */
   /* ==================== */
   .stilaro-vton-header {
+    display: block !important;
     text-align: center;
     margin-bottom: clamp(16px, 4vw, 24px);
     padding-right: 40px;
@@ -560,10 +606,109 @@
   }
 
   /* ==================== */
+  /* GLOBAL PHOTO SECTION */
+  /* ==================== */
+  .stilaro-global-photo-section {
+    margin-bottom: clamp(16px, 4vw, 20px);
+  }
+
+  .stilaro-global-upload-area {
+    border: 2px dashed var(--stilaro-primary);
+    border-radius: var(--stilaro-radius-lg);
+    padding: clamp(16px, 4vw, 20px);
+    text-align: center;
+    cursor: pointer;
+    transition: all var(--stilaro-transition);
+    background: linear-gradient(135deg, var(--stilaro-gray-50) 0%, rgba(var(--stilaro-primary), 0.05) 100%);
+  }
+
+  .stilaro-global-upload-area:hover {
+    background: var(--stilaro-gray-100);
+    border-style: solid;
+  }
+
+  .stilaro-global-upload-content svg {
+    color: var(--stilaro-primary);
+    margin-bottom: clamp(6px, 1.5vw, 8px);
+  }
+
+  .stilaro-global-upload-content p {
+    margin: 0 0 2px 0;
+    font-weight: 600;
+    font-size: clamp(14px, 3.5vw, 16px);
+    color: var(--stilaro-text);
+  }
+
+  .stilaro-global-upload-content span {
+    color: var(--stilaro-text-muted);
+    font-size: clamp(11px, 2.8vw, 12px);
+  }
+
+  .stilaro-global-photo-preview {
+    display: flex;
+    align-items: center;
+    gap: clamp(12px, 3vw, 16px);
+    padding: clamp(10px, 2.5vw, 12px);
+    background: var(--stilaro-gray-50);
+    border-radius: var(--stilaro-radius-lg);
+    border: 2px solid var(--stilaro-primary);
+  }
+
+  .stilaro-global-photo-preview img {
+    width: clamp(60px, 15vw, 80px);
+    height: clamp(80px, 20vw, 100px);
+    object-fit: cover;
+    border-radius: var(--stilaro-radius-md);
+    flex-shrink: 0;
+  }
+
+  .stilaro-global-photo-change {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: clamp(8px, 2vw, 10px) clamp(12px, 3vw, 16px);
+    background: var(--stilaro-bg);
+    border: 1px solid var(--stilaro-border);
+    border-radius: var(--stilaro-radius-md);
+    font-size: clamp(12px, 3vw, 13px);
+    font-weight: 500;
+    color: var(--stilaro-text);
+    cursor: pointer;
+    transition: all var(--stilaro-transition);
+    margin-left: auto;
+  }
+
+  .stilaro-global-photo-change:hover {
+    background: var(--stilaro-gray-100);
+    border-color: var(--stilaro-primary);
+  }
+
+  .stilaro-global-photo-change svg {
+    color: var(--stilaro-primary);
+  }
+
+  /* ==================== */
+  /* NEED PHOTO MESSAGE */
+  /* ==================== */
+  .stilaro-need-photo-msg {
+    text-align: center;
+    padding: clamp(20px, 5vw, 30px);
+    background: var(--stilaro-gray-50);
+    border-radius: var(--stilaro-radius-lg);
+    border: 2px dashed var(--stilaro-border);
+  }
+
+  .stilaro-need-photo-msg p {
+    margin: 0;
+    color: var(--stilaro-text-muted);
+    font-size: clamp(13px, 3.5vw, 15px);
+  }
+
+  /* ==================== */
   /* TABS */
   /* ==================== */
   .stilaro-vton-tabs {
-    display: flex;
+    display: flex !important;
     gap: 0;
     margin-bottom: clamp(16px, 4vw, 24px);
     border-bottom: 2px solid var(--stilaro-border);
@@ -606,6 +751,7 @@
   /* BODY */
   /* ==================== */
   .stilaro-vton-body {
+    display: block !important;
     min-height: 180px;
   }
 
@@ -1043,12 +1189,7 @@
     padding-top: clamp(12px, 3vw, 16px);
     border-top: 1px solid var(--stilaro-border);
     background: var(--stilaro-bg);
-    position: sticky;
-    bottom: calc(-1 * clamp(16px, 4vw, 24px));
-    margin: 0 calc(-1 * clamp(16px, 4vw, 24px)) calc(-1 * clamp(16px, 4vw, 24px));
-    padding-left: clamp(16px, 4vw, 24px);
-    padding-right: clamp(16px, 4vw, 24px);
-    padding-bottom: clamp(16px, 4vw, 20px);
+    margin-top: clamp(12px, 3vw, 16px);
   }
 
   .stilaro-recommendations-actions .stilaro-vton-primary-btn {
@@ -1392,6 +1533,7 @@
 
     .stilaro-recommendations-actions {
       flex-direction: column;
+      gap: 8px;
     }
 
     .stilaro-recommendations-actions .stilaro-vton-secondary-btn {
@@ -1400,6 +1542,7 @@
     }
 
     .stilaro-recommendations-actions .stilaro-vton-primary-btn {
+      width: 100%;
       order: 0;
     }
 

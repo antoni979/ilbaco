@@ -366,35 +366,53 @@ serve(async (req) => {
 
     if (isOutfitMode && processedGarments.length > 1) {
       // Prompt para outfit completo (múltiples prendas)
-      prompt = `Take the first reference photo as the EXACT BASE IMAGE. Your task is to dress the person with the ${processedGarments.length} clothing items shown in the following images.
+      prompt = `You are a professional virtual try-on system. The FIRST IMAGE is the user's photo - this is your IMMUTABLE BASE that must remain 100% unchanged.
 
-ABSOLUTE REQUIREMENTS - DO NOT CHANGE:
-- Keep the EXACT same photo: same pose, same angle, same background, same lighting, same shadows
-- Keep the EXACT same person: same face, same expression, same body position, same hands position
-- The output must look like the ORIGINAL PHOTO with different clothes - not a new photo
+CRITICAL - THE USER PHOTO IS SACRED AND UNTOUCHABLE:
+- The user's face must be PIXEL-PERFECT identical: same features, same expression, same skin tone, same makeup, same hair
+- The user's body position must be EXACTLY the same: same pose, same angle, same proportions
+- The background must be COMPLETELY PRESERVED: same environment, same objects, same colors
+- The lighting and shadows must remain IDENTICAL: same direction, same intensity, same ambient light
+- DO NOT regenerate, modify, or reinterpret ANY part of the original photo
 
-CLOTHING INSERTION:
-- Overlay ALL ${processedGarments.length} garments onto the person in their current pose
-- Layer appropriately: outerwear over tops, bottoms on legs, shoes on feet
-- Adapt each garment's shape to match the person's exact body position and pose
-- Realistic fabric draping that follows the existing pose and body angles
+YOUR ONLY TASK - OVERLAY CLOTHING:
+- Take the ${processedGarments.length} garment images provided and place them ON TOP of the user's existing clothes
+- The garments must adapt their shape and perspective to match the user's EXACT body position
+- Layer correctly: outerwear over tops, bottoms on lower body, shoes on feet
+- Apply realistic fabric physics: natural draping, wrinkles, and folds based on the pose
+- Blend the garment edges naturally where they meet the user's skin (neck, wrists, ankles)
 
-The final image must be indistinguishable from the original photo except for the clothing. Same background, same pose, same everything - only the clothes change.`;
+HYPER-REALISTIC INTEGRATION:
+- Match the lighting on the garments to the photo's existing light source
+- Add appropriate shadows cast by the new clothing
+- Ensure fabric texture and material look photorealistic
+- The clothing should look like it was worn when the photo was originally taken
+
+OUTPUT: The EXACT same photo with ONLY the clothing changed. If you showed this to the user, they should recognize it as their exact photo.`;
     } else {
       // Prompt original para una sola prenda
-      prompt = `Take the reference photo as the EXACT BASE IMAGE. Your task is to dress the person with the clothing item shown in the second image.
+      prompt = `You are a professional virtual try-on system. The FIRST IMAGE is the user's photo - this is your IMMUTABLE BASE that must remain 100% unchanged.
 
-ABSOLUTE REQUIREMENTS - DO NOT CHANGE:
-- Keep the EXACT same photo: same pose, same angle, same background, same lighting, same shadows
-- Keep the EXACT same person: same face, same expression, same body position, same hands position
-- The output must look like the ORIGINAL PHOTO with different clothes - not a new photo
+CRITICAL - THE USER PHOTO IS SACRED AND UNTOUCHABLE:
+- The user's face must be PIXEL-PERFECT identical: same features, same expression, same skin tone, same makeup, same hair
+- The user's body position must be EXACTLY the same: same pose, same angle, same proportions
+- The background must be COMPLETELY PRESERVED: same environment, same objects, same colors
+- The lighting and shadows must remain IDENTICAL: same direction, same intensity, same ambient light
+- DO NOT regenerate, modify, or reinterpret ANY part of the original photo
 
-CLOTHING INSERTION:
-- Overlay the garment onto the person in their current pose
-- Adapt the garment's shape to match the person's exact body position and pose
-- Realistic fabric draping that follows the existing pose and body angles
+YOUR ONLY TASK - OVERLAY THE GARMENT:
+- Take the clothing item from the SECOND IMAGE and place it ON TOP of the user's existing clothes
+- The garment must adapt its shape and perspective to match the user's EXACT body position
+- Apply realistic fabric physics: natural draping, wrinkles, and folds based on the pose
+- Blend the garment edges naturally where they meet the user's skin (neck, wrists, ankles)
 
-The final image must be indistinguishable from the original photo except for the clothing. Same background, same pose, same everything - only the clothes change.`;
+HYPER-REALISTIC INTEGRATION:
+- Match the lighting on the garment to the photo's existing light source
+- Add appropriate shadows cast by the new clothing
+- Ensure fabric texture and material look photorealistic
+- The clothing should look like it was worn when the photo was originally taken
+
+OUTPUT: The EXACT same photo with ONLY the clothing changed. If you showed this to the user, they should recognize it as their exact photo.`;
     }
 
     // Construir parts con todas las imágenes

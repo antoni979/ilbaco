@@ -10,7 +10,8 @@
       "mcp__supabase__apply_migration",
       "mcp__supabase__list_tables",
       "Bash(node -e:*)",
-      "Bash(node --check:*)"
+      "Bash(node --check:*)",
+      "Bash(npx shopify app deploy:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
