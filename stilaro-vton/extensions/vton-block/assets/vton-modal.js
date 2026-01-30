@@ -1373,9 +1373,7 @@
       uploadPreview.innerHTML = html;
     }
 
-    // Mostrar mensaje de necesita foto, ocultar botón
-    const outfitNeedPhotoMsg = document.getElementById('stilaro-outfit-need-photo-msg');
-    if (outfitNeedPhotoMsg) outfitNeedPhotoMsg.style.display = 'block';
+    // Ocultar botón
     if (outfitContinueBtn) outfitContinueBtn.style.display = 'none';
 
     if (outfitPhotoInput) outfitPhotoInput.value = '';
@@ -1668,16 +1666,12 @@
   function resetToOutfitUpload() {
     selectedOutfitItems = [];
 
-    const outfitNeedPhotoMsg = document.getElementById('stilaro-outfit-need-photo-msg');
-
     // Si hay foto global, usarla
     if (globalUserPhotoBase64) {
       outfitUserPhotoBase64 = globalUserPhotoBase64;
-      if (outfitNeedPhotoMsg) outfitNeedPhotoMsg.style.display = 'none';
       if (outfitContinueBtn) outfitContinueBtn.style.display = 'block';
     } else {
       outfitUserPhotoBase64 = null;
-      if (outfitNeedPhotoMsg) outfitNeedPhotoMsg.style.display = 'block';
       if (outfitContinueBtn) outfitContinueBtn.style.display = 'none';
     }
 
@@ -1882,16 +1876,12 @@
     // Reset analysis pero mantener foto si hay global
     sizingData.analysis = null;
 
-    const sizingNeedPhotoMsg = document.getElementById('stilaro-sizing-need-photo-msg');
-
     // Si hay foto global, usarla
     if (globalUserPhotoBase64) {
       sizingUserPhotoBase64 = globalUserPhotoBase64;
-      if (sizingNeedPhotoMsg) sizingNeedPhotoMsg.style.display = 'none';
       if (sizingContinueBtn) sizingContinueBtn.style.display = 'block';
     } else {
       sizingUserPhotoBase64 = null;
-      if (sizingNeedPhotoMsg) sizingNeedPhotoMsg.style.display = 'block';
       if (sizingContinueBtn) sizingContinueBtn.style.display = 'none';
     }
 
@@ -2209,16 +2199,12 @@
       analysis: null
     };
 
-    const sizingNeedPhotoMsg = document.getElementById('stilaro-sizing-need-photo-msg');
-
     // Si hay foto global, usarla
     if (globalUserPhotoBase64) {
       sizingUserPhotoBase64 = globalUserPhotoBase64;
-      if (sizingNeedPhotoMsg) sizingNeedPhotoMsg.style.display = 'none';
       if (sizingContinueBtn) sizingContinueBtn.style.display = 'block';
     } else {
       sizingUserPhotoBase64 = null;
-      if (sizingNeedPhotoMsg) sizingNeedPhotoMsg.style.display = 'block';
       if (sizingContinueBtn) sizingContinueBtn.style.display = 'none';
     }
 
@@ -2424,22 +2410,14 @@
   }
 
   function updateTabsWithGlobalPhoto() {
-    // Mensajes de "necesita foto"
-    const needPhotoMsg = document.getElementById('stilaro-need-photo-msg');
-    const sizingNeedPhotoMsg = document.getElementById('stilaro-sizing-need-photo-msg');
-    const outfitNeedPhotoMsg = document.getElementById('stilaro-outfit-need-photo-msg');
-
-    // Tab 1: Single - Ocultar mensaje, mostrar botón
-    if (needPhotoMsg) needPhotoMsg.style.display = 'none';
+    // Tab 1: Single - Mostrar botón
     if (tryOnBtn) tryOnBtn.style.display = 'block';
     hideUsageInfo();
 
-    // Tab 2: Outfit - Ocultar mensaje, mostrar botón
-    if (outfitNeedPhotoMsg) outfitNeedPhotoMsg.style.display = 'none';
+    // Tab 2: Outfit - Mostrar botón
     if (outfitContinueBtn) outfitContinueBtn.style.display = 'block';
 
-    // Tab 3: Sizing - Ocultar mensaje, mostrar botón
-    if (sizingNeedPhotoMsg) sizingNeedPhotoMsg.style.display = 'none';
+    // Tab 3: Sizing - Mostrar botón
     if (sizingContinueBtn) sizingContinueBtn.style.display = 'block';
 
     console.log('[VTON] Foto global aplicada a todas las pestañas');
@@ -2455,21 +2433,13 @@
     if (globalUploadArea) globalUploadArea.style.display = 'block';
     if (globalPhotoPreview) globalPhotoPreview.style.display = 'none';
 
-    // Mensajes de "necesita foto"
-    const needPhotoMsg = document.getElementById('stilaro-need-photo-msg');
-    const sizingNeedPhotoMsg = document.getElementById('stilaro-sizing-need-photo-msg');
-    const outfitNeedPhotoMsg = document.getElementById('stilaro-outfit-need-photo-msg');
-
-    // Tab 1: Mostrar mensaje, ocultar botón
-    if (needPhotoMsg) needPhotoMsg.style.display = 'block';
+    // Tab 1: Ocultar botón
     if (tryOnBtn) tryOnBtn.style.display = 'none';
 
-    // Tab 2: Mostrar mensaje, ocultar botón
-    if (outfitNeedPhotoMsg) outfitNeedPhotoMsg.style.display = 'block';
+    // Tab 2: Ocultar botón
     if (outfitContinueBtn) outfitContinueBtn.style.display = 'none';
 
-    // Tab 3: Mostrar mensaje, ocultar botón
-    if (sizingNeedPhotoMsg) sizingNeedPhotoMsg.style.display = 'block';
+    // Tab 3: Ocultar botón
     if (sizingContinueBtn) sizingContinueBtn.style.display = 'none';
   }
 
@@ -2622,16 +2592,12 @@
       statusMsg.style.display = 'none';
     }
 
-    const needPhotoMsg = document.getElementById('stilaro-need-photo-msg');
-
     // Si hay foto global, usarla
     if (globalUserPhotoBase64) {
       userPhotoBase64 = globalUserPhotoBase64;
-      if (needPhotoMsg) needPhotoMsg.style.display = 'none';
       if (tryOnBtn) tryOnBtn.style.display = 'block';
     } else {
       userPhotoBase64 = null;
-      if (needPhotoMsg) needPhotoMsg.style.display = 'block';
       if (tryOnBtn) tryOnBtn.style.display = 'none';
     }
 

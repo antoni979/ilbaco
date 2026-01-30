@@ -84,11 +84,6 @@
           <span id="stilaro-product-title"></span>
         </div>
 
-        <!-- Mensaje si no hay foto -->
-        <div class="stilaro-need-photo-msg" id="stilaro-need-photo-msg">
-          <p>Sube tu foto arriba para probar esta prenda</p>
-        </div>
-
         <!-- Input oculto para compatibilidad -->
         <input type="file" id="stilaro-photo-input" accept="image/*" style="display: none;">
         <div id="stilaro-upload-area" style="display: none;"></div>
@@ -149,11 +144,6 @@
 
         <div class="stilaro-sizing-intro">
           <p>Analizaremos tu complexión con la foto que subiste para recomendarte la talla perfecta.</p>
-        </div>
-
-        <!-- Mensaje si no hay foto -->
-        <div class="stilaro-need-photo-msg" id="stilaro-sizing-need-photo-msg">
-          <p>Sube tu foto arriba para calcular tu talla</p>
         </div>
 
         <!-- Inputs ocultos para compatibilidad -->
@@ -284,11 +274,6 @@
         <div class="stilaro-outfit-selected-summary" id="stilaro-outfit-selected-summary">
           <p><strong>Tu outfit seleccionado:</strong></p>
           <div class="outfit-preview" id="stilaro-outfit-upload-preview"></div>
-        </div>
-
-        <!-- Mensaje si no hay foto -->
-        <div class="stilaro-need-photo-msg" id="stilaro-outfit-need-photo-msg">
-          <p>Sube tu foto arriba para probarte el outfit</p>
         </div>
 
         <!-- Inputs ocultos para compatibilidad -->
@@ -685,23 +670,6 @@
 
   .stilaro-global-photo-change svg {
     color: var(--stilaro-primary);
-  }
-
-  /* ==================== */
-  /* NEED PHOTO MESSAGE */
-  /* ==================== */
-  .stilaro-need-photo-msg {
-    text-align: center;
-    padding: clamp(20px, 5vw, 30px);
-    background: var(--stilaro-gray-50);
-    border-radius: var(--stilaro-radius-lg);
-    border: 2px dashed var(--stilaro-border);
-  }
-
-  .stilaro-need-photo-msg p {
-    margin: 0;
-    color: var(--stilaro-text-muted);
-    font-size: clamp(13px, 3.5vw, 15px);
   }
 
   /* ==================== */
