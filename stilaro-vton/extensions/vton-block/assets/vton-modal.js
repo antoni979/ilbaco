@@ -7,6 +7,10 @@
 (function () {
   'use strict';
 
+  // Evitar doble ejecución si el script se carga múltiples veces
+  if (window.__STILARO_VTON_LOADED__) return;
+  window.__STILARO_VTON_LOADED__ = true;
+
   // Configuracion
   const CONFIG = {
     supabaseUrl: 'https://cbreesdbmbqctwbeswrt.supabase.co',
@@ -32,10 +36,13 @@
   let sizingData = {
     height: null,
     fit_preference: 'regular',
-    reference_brand: 'zara',
+    reference_brand: 'grandes_almacenes',
     reference_size: 'M',
     analysis: null
   };
+
+  // Banderas para evitar doble apertura del diálogo de archivos
+  let isFileDialogOpen = false;
 
   // ========================================
   // FASHION TIPS - Consejos de moda animados
@@ -701,6 +708,48 @@
     }
   }
 
+  // ========================================
+  // THEME COLOR DETECTION - Adaptive styling
+  // ========================================
+  function detectThemeColors() {
+    const modal = document.getElementById('stilaro-vton-modal');
+    if (!modal) return;
+
+    // Get computed styles from body and main elements
+    const body = document.body;
+    const bodyStyles = window.getComputedStyle(body);
+
+    // Try to detect background color
+    let bgColor = bodyStyles.backgroundColor;
+    if (bgColor === 'rgba(0, 0, 0, 0)' || bgColor === 'transparent') {
+      // Try html element
+      bgColor = window.getComputedStyle(document.documentElement).backgroundColor;
+    }
+
+    // Try to detect text color
+    let textColor = bodyStyles.color;
+
+    // Check if we got valid colors
+    if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)') {
+      modal.style.setProperty('--stilaro-bg', bgColor);
+    }
+
+    if (textColor) {
+      modal.style.setProperty('--stilaro-text', textColor);
+    }
+
+    // Detect if theme is dark by analyzing luminance
+    const rgb = bgColor.match(/\d+/g);
+    if (rgb && rgb.length >= 3) {
+      const luminance = (0.299 * parseInt(rgb[0]) + 0.587 * parseInt(rgb[1]) + 0.114 * parseInt(rgb[2])) / 255;
+      if (luminance < 0.5) {
+        modal.classList.add('stilaro-dark-theme');
+      }
+    }
+
+    console.log('[VTON] Theme detected - BG:', bgColor, 'Text:', textColor);
+  }
+
   // Inicializar
   function init() {
     // Generar/obtener IDs
@@ -709,21 +758,38 @@
 
     console.log('[VTON] Inicializado - Shop:', shopDomain, 'Visitor:', visitorId);
 
+    // Detect theme colors for adaptive styling
+    detectThemeColors();
+
     // Botones de apertura del modal
     document.querySelectorAll('.stilaro-vton-button').forEach(btn => {
       btn.addEventListener('click', openModal);
     });
 
-    // Cerrar modal (solo con botón X, overlay permite interactuar con la página)
+    // Cerrar modal con botón X
     closeBtn?.addEventListener('click', closeModal);
+
+    // Cerrar modal al hacer clic en el overlay (fondo oscuro)
+    const overlay = document.querySelector('.stilaro-vton-modal-overlay');
+    overlay?.addEventListener('click', closeModal);
 
     // Upload (Tab 1)
     uploadArea?.addEventListener('click', (e) => {
-      if (e.target !== photoInput) photoInput?.click();
+      e.stopPropagation();
+      if (!isFileDialogOpen && e.target !== photoInput) {
+        isFileDialogOpen = true;
+        photoInput?.click();
+      }
     });
     uploadArea?.addEventListener('dragover', handleDragOver);
     uploadArea?.addEventListener('drop', handleDrop);
-    photoInput?.addEventListener('change', handleFileSelect);
+    photoInput?.addEventListener('change', (e) => {
+      isFileDialogOpen = false;
+      handleFileSelect(e);
+    });
+    photoInput?.addEventListener('cancel', () => {
+      isFileDialogOpen = false;
+    });
 
     // Acciones (Tab 1)
     tryOnBtn?.addEventListener('click', generateTryOn);
@@ -739,11 +805,21 @@
     // ==================== TAB 3: SIZING ====================
     // Upload (Tab 3)
     sizingUploadArea?.addEventListener('click', (e) => {
-      if (e.target !== sizingPhotoInput) sizingPhotoInput?.click();
+      e.stopPropagation();
+      if (!isFileDialogOpen && e.target !== sizingPhotoInput) {
+        isFileDialogOpen = true;
+        sizingPhotoInput?.click();
+      }
     });
     sizingUploadArea?.addEventListener('dragover', handleDragOver);
     sizingUploadArea?.addEventListener('drop', handleSizingDrop);
-    sizingPhotoInput?.addEventListener('change', handleSizingFileSelect);
+    sizingPhotoInput?.addEventListener('change', (e) => {
+      isFileDialogOpen = false;
+      handleSizingFileSelect(e);
+    });
+    sizingPhotoInput?.addEventListener('cancel', () => {
+      isFileDialogOpen = false;
+    });
 
     // Acciones (Tab 3)
     sizingContinueBtn?.addEventListener('click', showSizingForm);
@@ -757,11 +833,21 @@
     // ==================== TAB 2: OUTFIT ====================
     // Upload (Tab 2)
     outfitUploadArea?.addEventListener('click', (e) => {
-      if (e.target !== outfitPhotoInput) outfitPhotoInput?.click();
+      e.stopPropagation();
+      if (!isFileDialogOpen && e.target !== outfitPhotoInput) {
+        isFileDialogOpen = true;
+        outfitPhotoInput?.click();
+      }
     });
     outfitUploadArea?.addEventListener('dragover', handleDragOver);
     outfitUploadArea?.addEventListener('drop', handleOutfitDrop);
-    outfitPhotoInput?.addEventListener('change', handleOutfitFileSelect);
+    outfitPhotoInput?.addEventListener('change', (e) => {
+      isFileDialogOpen = false;
+      handleOutfitFileSelect(e);
+    });
+    outfitPhotoInput?.addEventListener('cancel', () => {
+      isFileDialogOpen = false;
+    });
 
     // Acciones (Tab 2)
     // Ahora el flujo es: Recomendaciones → Foto → VTON
@@ -774,7 +860,7 @@
 
     // Cerrar con ESC
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && modal?.style.display !== 'none') {
+      if (e.key === 'Escape' && modal?.classList.contains('stilaro-active')) {
         closeModal();
       }
     });
@@ -887,22 +973,21 @@
       return;
     }
 
+    // Mostrar loading INMEDIATAMENTE para evitar doble-click
+    showOutfitStep(outfitLoading);
+    startOutfitProgressAnimation();
+
     const reader = new FileReader();
     reader.onload = (e) => {
       outfitUserPhotoBase64 = e.target.result;
 
-      // Mostrar preview brevemente y luego generar VTON automáticamente
-      if (outfitUserPreview) {
-        outfitUserPreview.src = outfitUserPhotoBase64;
-        outfitUserPreview.style.display = 'block';
-      }
-
-      if (outfitUploadArea) outfitUploadArea.style.display = 'none';
-
-      // Generar VTON automáticamente después de subir foto
-      setTimeout(() => {
-        generateOutfitTryOn(false);
-      }, 500);
+      // Generar VTON automáticamente
+      generateOutfitTryOn(false);
+    };
+    reader.onerror = () => {
+      stopOutfitProgressAnimation();
+      showOutfitStep(outfitUpload);
+      alert('Error al leer la imagen. Por favor, inténtalo de nuevo.');
     };
     reader.readAsDataURL(file);
   }
@@ -925,6 +1010,7 @@
     if (outfitUploadArea) outfitUploadArea.style.display = 'block';
     if (outfitUserPreview) outfitUserPreview.style.display = 'none';
     if (outfitPhotoInput) outfitPhotoInput.value = '';
+    isFileDialogOpen = false; // Reset bandera
   }
 
   async function showOutfitRecommendations() {
@@ -1094,14 +1180,22 @@
   }
 
   async function generateOutfitTryOn(skipRecommendations) {
-    if (!outfitUserPhotoBase64 || !currentProduct) return;
+    if (!outfitUserPhotoBase64 || !currentProduct) {
+      // Si no hay foto, volver al upload
+      stopOutfitProgressAnimation();
+      showOutfitStep(outfitUpload);
+      return;
+    }
 
-    // Mostrar loading
+    // Mostrar loading (si no está ya visible)
     if (outfitRecommendations) outfitRecommendations.style.display = 'none';
     if (outfitUpload) outfitUpload.style.display = 'none';
     if (outfitLoading) outfitLoading.style.display = 'block';
 
-    startOutfitProgressAnimation();
+    // Solo iniciar animación si no está ya en progreso
+    if (!outfitProgressInterval) {
+      startOutfitProgressAnimation();
+    }
 
     try {
       // Construir array de imágenes
@@ -1223,13 +1317,11 @@
     // Iniciar tips de moda
     startFashionTips('stilaro-tip-text');
 
+    // Incremento constante: 95% en ~25 segundos (125 intervalos de 200ms)
+    // 95 / 125 = 0.76% por intervalo
     outfitProgressInterval = setInterval(() => {
-      if (outfitCurrentProgress < 70) {
-        outfitCurrentProgress += Math.random() * 5 + 2;
-      } else if (outfitCurrentProgress < 90) {
-        outfitCurrentProgress += Math.random() * 2 + 0.5;
-      } else if (outfitCurrentProgress < 95) {
-        outfitCurrentProgress += Math.random() * 0.5;
+      if (outfitCurrentProgress < 95) {
+        outfitCurrentProgress += 0.76;
       }
 
       outfitCurrentProgress = Math.min(outfitCurrentProgress, 95);
@@ -1293,17 +1385,15 @@
   // TAB 3: SIZING FUNCTIONS
   // ========================================
 
-  // Offsets de marca (positivo = talla pequeña, pedir más grande)
+  // Offsets de tipo de tienda (positivo = talla pequeña, pedir más grande)
   const BRAND_OFFSETS = {
-    'zara': 0,
-    'hm': 0,
-    'mango': 0,
-    'pull_bear': 0,
-    'bershka': 0,
-    'massimo_dutti': 0.5,
-    'uniqlo': -0.5,
-    'nike': -0.5,
-    'adidas': -0.5,
+    'grandes_almacenes': 0,
+    'moda_economica': -0.3,
+    'moda_estandar': 0,
+    'moda_joven': 0,
+    'moda_premium': 0.5,
+    'moda_asiatica': -0.5,
+    'deportivo': -0.3,
     'other': 0
   };
 
@@ -1372,6 +1462,9 @@
       return;
     }
 
+    // Ocultar area de upload INMEDIATAMENTE para evitar doble-click
+    if (sizingUploadArea) sizingUploadArea.style.display = 'none';
+
     const reader = new FileReader();
     reader.onload = (e) => {
       sizingUserPhotoBase64 = e.target.result;
@@ -1381,8 +1474,12 @@
         sizingUserPreview.style.display = 'block';
       }
 
-      if (sizingUploadArea) sizingUploadArea.style.display = 'none';
       if (sizingContinueBtn) sizingContinueBtn.style.display = 'block';
+    };
+    reader.onerror = () => {
+      // Restaurar area de upload en caso de error
+      if (sizingUploadArea) sizingUploadArea.style.display = 'block';
+      alert('Error al leer la imagen. Por favor, inténtalo de nuevo.');
     };
     reader.readAsDataURL(file);
   }
@@ -1708,7 +1805,7 @@
     sizingData = {
       height: null,
       fit_preference: 'regular',
-      reference_brand: 'zara',
+      reference_brand: 'grandes_almacenes',
       reference_size: 'M',
       analysis: null
     };
@@ -1727,7 +1824,7 @@
     if (heightInput) heightInput.value = '';
 
     const brandSelect = document.getElementById('stilaro-sizing-brand');
-    if (brandSelect) brandSelect.value = 'zara';
+    if (brandSelect) brandSelect.value = 'grandes_almacenes';
 
     // Reset fit options
     const fitOptions = document.querySelectorAll('#stilaro-sizing-fit .stilaro-sizing-option');
@@ -1773,8 +1870,13 @@
     currentTab = 'single';
     tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === 'single'));
 
-    // Mostrar modal (sin bloquear scroll de la página)
-    if (modal) modal.style.display = 'block';
+    // Mostrar modal centrado (sin bloquear scroll de la página)
+    if (modal) {
+      modal.classList.add('stilaro-active');
+    }
+
+    // Re-detect theme colors in case styles loaded dynamically
+    detectThemeColors();
 
     // Ocultar todos los steps excepto el de upload tab 1
     [stepResult, stepLoading,
@@ -1796,9 +1898,12 @@
   }
 
   function closeModal() {
-    if (modal) modal.style.display = 'none';
+    if (modal) {
+      modal.classList.remove('stilaro-active');
+    }
     userPhotoBase64 = null;
     shopStatus = null;
+    isFileDialogOpen = false;
   }
 
   function handleDragOver(e) {
@@ -1838,6 +1943,9 @@
       return;
     }
 
+    // Ocultar area de upload INMEDIATAMENTE para evitar doble-click
+    if (uploadArea) uploadArea.style.display = 'none';
+
     const reader = new FileReader();
     reader.onload = (e) => {
       userPhotoBase64 = e.target.result;
@@ -1848,10 +1956,13 @@
         userPreview.style.display = 'block';
       }
 
-      // Ocultar area de upload y uso info, mostrar boton
-      if (uploadArea) uploadArea.style.display = 'none';
       hideUsageInfo();
       if (tryOnBtn) tryOnBtn.style.display = 'block';
+    };
+    reader.onerror = () => {
+      // Restaurar area de upload en caso de error
+      if (uploadArea) uploadArea.style.display = 'block';
+      alert('Error al leer la imagen. Por favor, inténtalo de nuevo.');
     };
     reader.readAsDataURL(file);
   }
@@ -1997,17 +2108,14 @@
     // Iniciar tips de moda
     startFashionTips('stilaro-tip-text-single');
 
+    // Incremento constante: 95% en ~25 segundos (125 intervalos de 200ms)
+    // 95 / 125 = 0.76% por intervalo
     progressInterval = setInterval(() => {
-      // Incremento no lineal: rapido al principio, lento cerca del 95%
-      if (currentProgress < 70) {
-        currentProgress += Math.random() * 5 + 2;
-      } else if (currentProgress < 90) {
-        currentProgress += Math.random() * 2 + 0.5;
-      } else if (currentProgress < 95) {
-        currentProgress += Math.random() * 0.5;
+      if (currentProgress < 95) {
+        currentProgress += 0.76;
       }
 
-      currentProgress = Math.min(currentProgress, 95); // Nunca llegar a 100% hasta que termine
+      currentProgress = Math.min(currentProgress, 95);
 
       if (progressFill) progressFill.style.width = currentProgress + '%';
       if (progressText) progressText.textContent = Math.floor(currentProgress) + '%';

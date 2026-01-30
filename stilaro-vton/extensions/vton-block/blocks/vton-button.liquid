@@ -31,7 +31,7 @@
 </div>
 
 <!-- Modal del Probador Virtual -->
-<div id="stilaro-vton-modal" class="stilaro-vton-modal" style="display: none;">
+<div id="stilaro-vton-modal" class="stilaro-vton-modal">
   <div class="stilaro-vton-modal-overlay"></div>
   <div class="stilaro-vton-modal-content">
     <button class="stilaro-vton-close">&times;</button>
@@ -180,17 +180,15 @@
           </div>
 
           <div class="stilaro-sizing-field">
-            <label for="stilaro-sizing-brand">¿Qué marca usas de referencia?</label>
+            <label for="stilaro-sizing-brand">¿Qué tipo de tienda usas de referencia?</label>
             <select id="stilaro-sizing-brand">
-              <option value="zara">Zara</option>
-              <option value="hm">H&M</option>
-              <option value="mango">Mango</option>
-              <option value="pull_bear">Pull&Bear</option>
-              <option value="bershka">Bershka</option>
-              <option value="massimo_dutti">Massimo Dutti</option>
-              <option value="uniqlo">Uniqlo</option>
-              <option value="nike">Nike</option>
-              <option value="adidas">Adidas</option>
+              <option value="grandes_almacenes">Grandes Almacenes</option>
+              <option value="moda_economica">Moda Económica (tallaje amplio)</option>
+              <option value="moda_estandar">Moda Estándar</option>
+              <option value="moda_joven">Moda Joven</option>
+              <option value="moda_premium">Moda Premium (tallaje pequeño)</option>
+              <option value="moda_asiatica">Moda Asiática (tallaje grande)</option>
+              <option value="deportivo">Tiendas Deportivas</option>
               <option value="other">Otra</option>
             </select>
           </div>
@@ -356,26 +354,48 @@
 
 <style>
   /* ==================== */
-  /* CSS VARIABLES */
+  /* CSS VARIABLES - ADAPTIVE TO THEME */
   /* ==================== */
-  :root {
+  .stilaro-vton-modal {
+    /* Primary color from settings */
     --stilaro-primary: {{ block.settings.button_bg_color }};
     --stilaro-primary-text: {{ block.settings.button_text_color }};
-    --stilaro-gray-50: #f9fafb;
-    --stilaro-gray-100: #f3f4f6;
-    --stilaro-gray-200: #e5e7eb;
-    --stilaro-gray-300: #d1d5db;
-    --stilaro-gray-400: #9ca3af;
-    --stilaro-gray-500: #6b7280;
-    --stilaro-gray-600: #4b5563;
-    --stilaro-gray-700: #374151;
-    --stilaro-gray-800: #1f2937;
+
+    /* Adaptive colors - inherit from Shopify theme or use smart fallbacks */
+    /* Background: try theme vars, fallback to computed from page background */
+    --stilaro-bg: var(--color-background, var(--color-base-background-1, #ffffff));
+    --stilaro-bg-secondary: var(--color-background-2, var(--color-base-background-2, rgba(128, 128, 128, 0.06)));
+
+    /* Text colors: inherit from theme */
+    --stilaro-text: var(--color-foreground, var(--color-base-text, currentColor));
+    --stilaro-text-muted: var(--color-foreground-muted, color-mix(in srgb, var(--stilaro-text) 60%, transparent));
+    --stilaro-text-subtle: var(--color-foreground-subtle, color-mix(in srgb, var(--stilaro-text) 45%, transparent));
+
+    /* Border: inherit from theme */
+    --stilaro-border: var(--color-border, color-mix(in srgb, var(--stilaro-text) 15%, transparent));
+    --stilaro-border-strong: var(--color-border-strong, color-mix(in srgb, var(--stilaro-text) 25%, transparent));
+
+    /* Adaptive grays using color-mix for theme compatibility */
+    --stilaro-gray-50: color-mix(in srgb, var(--stilaro-text) 3%, var(--stilaro-bg));
+    --stilaro-gray-100: color-mix(in srgb, var(--stilaro-text) 6%, var(--stilaro-bg));
+    --stilaro-gray-200: color-mix(in srgb, var(--stilaro-text) 12%, var(--stilaro-bg));
+    --stilaro-gray-300: color-mix(in srgb, var(--stilaro-text) 20%, var(--stilaro-bg));
+    --stilaro-gray-400: color-mix(in srgb, var(--stilaro-text) 40%, var(--stilaro-bg));
+    --stilaro-gray-500: color-mix(in srgb, var(--stilaro-text) 55%, var(--stilaro-bg));
+    --stilaro-gray-600: color-mix(in srgb, var(--stilaro-text) 70%, var(--stilaro-bg));
+    --stilaro-gray-700: color-mix(in srgb, var(--stilaro-text) 80%, var(--stilaro-bg));
+    --stilaro-gray-800: color-mix(in srgb, var(--stilaro-text) 90%, var(--stilaro-bg));
+
+    /* Design tokens */
     --stilaro-radius-sm: 6px;
     --stilaro-radius-md: 8px;
     --stilaro-radius-lg: 12px;
     --stilaro-radius-xl: 16px;
     --stilaro-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     --stilaro-transition: 0.2s ease;
+
+    /* Color scheme detection */
+    color-scheme: light dark;
   }
 
   .stilaro-vton-container {
@@ -391,15 +411,26 @@
     left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
     z-index: 999999 !important;
     max-width: none !important;
     margin: 0 !important;
     padding: 0 !important;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: none;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    /* Reset any inherited styles that could interfere */
+    transform: none !important;
+    float: none !important;
+    clear: both !important;
+  }
+
+  /* Active state - show centered */
+  .stilaro-vton-modal.stilaro-active {
+    display: flex !important;
   }
 
   .stilaro-vton-modal-overlay {
@@ -408,17 +439,25 @@
     left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    background: rgba(0, 0, 0, 0.4) !important;
-    pointer-events: none !important;
-    backdrop-filter: blur(2px);
-    -webkit-backdrop-filter: blur(2px);
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+    pointer-events: auto !important;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 1 !important;
+  }
+
+  /* Content wrapper for centering */
+  .stilaro-vton-modal > .stilaro-vton-modal-content {
+    z-index: 2 !important;
   }
 
   .stilaro-vton-modal-content {
     position: relative !important;
-    background: white !important;
+    background: var(--stilaro-bg) !important;
+    color: var(--stilaro-text) !important;
     border-radius: var(--stilaro-radius-xl) !important;
     width: calc(100% - 32px) !important;
     max-width: 480px !important;
@@ -430,10 +469,12 @@
     scrollbar-width: thin;
     scrollbar-color: var(--stilaro-gray-300) transparent;
     box-sizing: border-box !important;
-    margin: 0 !important;
+    margin: auto !important;
     transition: max-width 0.3s ease, max-height 0.3s ease;
     pointer-events: auto !important;
     box-shadow: var(--stilaro-shadow) !important;
+    /* Ensure it stays centered even if flex fails */
+    flex-shrink: 0 !important;
   }
 
   /* Scrollbar personalizado */
@@ -470,12 +511,12 @@
     width: clamp(32px, 8vw, 36px);
     height: clamp(32px, 8vw, 36px);
     background: var(--stilaro-gray-100);
-    border: none;
+    border: 1px solid var(--stilaro-border);
     border-radius: 50%;
     font-size: clamp(18px, 4vw, 22px);
     font-weight: 300;
     cursor: pointer;
-    color: var(--stilaro-gray-500);
+    color: var(--stilaro-text-muted);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -486,7 +527,7 @@
 
   .stilaro-vton-close:hover {
     background: var(--stilaro-gray-200);
-    color: var(--stilaro-gray-700);
+    color: var(--stilaro-text);
     transform: scale(1.05);
   }
 
@@ -507,13 +548,13 @@
     margin: 0 0 6px 0;
     font-size: clamp(18px, 4.5vw, 22px);
     font-weight: 600;
-    color: var(--stilaro-gray-800);
+    color: var(--stilaro-text);
     line-height: 1.3;
   }
 
   .stilaro-vton-header p {
     margin: 0;
-    color: var(--stilaro-gray-500);
+    color: var(--stilaro-text-muted);
     font-size: clamp(12px, 3vw, 14px);
     line-height: 1.4;
   }
@@ -525,7 +566,7 @@
     display: flex;
     gap: 0;
     margin-bottom: clamp(16px, 4vw, 24px);
-    border-bottom: 2px solid var(--stilaro-gray-200);
+    border-bottom: 2px solid var(--stilaro-border);
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
@@ -546,14 +587,14 @@
     margin-bottom: -2px;
     font-size: clamp(12px, 3vw, 14px);
     font-weight: 500;
-    color: var(--stilaro-gray-500);
+    color: var(--stilaro-text-muted);
     cursor: pointer;
     transition: all var(--stilaro-transition);
     white-space: nowrap;
   }
 
   .stilaro-tab:hover {
-    color: var(--stilaro-gray-700);
+    color: var(--stilaro-text);
   }
 
   .stilaro-tab.active {
@@ -592,7 +633,7 @@
   .stilaro-vton-product-preview span {
     font-size: clamp(12px, 3vw, 14px);
     font-weight: 500;
-    color: var(--stilaro-gray-700);
+    color: var(--stilaro-text);
     line-height: 1.3;
     overflow: hidden;
     display: -webkit-box;
@@ -604,21 +645,22 @@
   /* UPLOAD AREA */
   /* ==================== */
   .stilaro-vton-upload-area {
-    border: 2px dashed var(--stilaro-gray-300);
+    border: 2px dashed var(--stilaro-border-strong);
     border-radius: var(--stilaro-radius-lg);
     padding: clamp(24px, 6vw, 40px) clamp(16px, 4vw, 20px);
     text-align: center;
     cursor: pointer;
     transition: all var(--stilaro-transition);
+    background: var(--stilaro-gray-50);
   }
 
   .stilaro-vton-upload-area:hover {
     border-color: var(--stilaro-primary);
-    background: rgba(0, 0, 0, 0.01);
+    background: var(--stilaro-gray-100);
   }
 
   .stilaro-vton-upload-content svg {
-    color: var(--stilaro-gray-400);
+    color: var(--stilaro-text-subtle);
     margin-bottom: clamp(8px, 2vw, 12px);
     width: clamp(36px, 10vw, 48px);
     height: clamp(36px, 10vw, 48px);
@@ -628,11 +670,11 @@
     margin: 0 0 4px 0;
     font-weight: 500;
     font-size: clamp(13px, 3.5vw, 15px);
-    color: var(--stilaro-gray-700);
+    color: var(--stilaro-text);
   }
 
   .stilaro-vton-upload-content span {
-    color: var(--stilaro-gray-400);
+    color: var(--stilaro-text-subtle);
     font-size: clamp(11px, 2.8vw, 12px);
   }
 
@@ -677,8 +719,8 @@
   .stilaro-vton-secondary-btn {
     padding: clamp(10px, 2.5vw, 14px) clamp(12px, 3vw, 16px);
     background: var(--stilaro-gray-100);
-    color: var(--stilaro-gray-700);
-    border: none;
+    color: var(--stilaro-text);
+    border: 1px solid var(--stilaro-border);
     border-radius: var(--stilaro-radius-md);
     font-size: clamp(12px, 3vw, 14px);
     font-weight: 500;
@@ -753,7 +795,7 @@
   #stilaro-step-loading p,
   #stilaro-sizing-loading p,
   #stilaro-outfit-loading p {
-    color: var(--stilaro-gray-500);
+    color: var(--stilaro-text-muted);
     margin-top: clamp(12px, 3vw, 16px);
     font-size: clamp(13px, 3.5vw, 15px);
   }
@@ -798,7 +840,7 @@
     display: block;
     margin-bottom: clamp(6px, 1.5vw, 10px);
     font-size: clamp(12px, 3vw, 14px);
-    color: var(--stilaro-gray-600);
+    color: var(--stilaro-text-muted);
   }
 
   .outfit-preview,
@@ -827,12 +869,12 @@
     margin: 0 0 clamp(4px, 1vw, 6px) 0;
     font-size: clamp(16px, 4vw, 18px);
     font-weight: 600;
-    color: var(--stilaro-gray-800);
+    color: var(--stilaro-text);
   }
 
   .stilaro-recommendations-header p {
     margin: 0;
-    color: var(--stilaro-gray-500);
+    color: var(--stilaro-text-muted);
     font-size: clamp(12px, 3vw, 14px);
   }
 
@@ -878,7 +920,7 @@
 
   .stilaro-loading-text {
     text-align: center;
-    color: var(--stilaro-gray-500);
+    color: var(--stilaro-text-muted);
     padding: clamp(16px, 4vw, 20px);
     font-size: clamp(13px, 3.5vw, 14px);
   }
@@ -890,7 +932,7 @@
   .stilaro-recommendation-category h4 {
     margin: 0 0 clamp(8px, 2vw, 10px) 0;
     font-size: clamp(11px, 2.8vw, 13px);
-    color: var(--stilaro-gray-500);
+    color: var(--stilaro-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
     font-weight: 600;
@@ -920,16 +962,16 @@
   .stilaro-recommendation-item {
     flex: 0 0 clamp(85px, 22vw, 100px);
     cursor: pointer;
-    border: 2px solid var(--stilaro-gray-200);
+    border: 2px solid var(--stilaro-border);
     border-radius: var(--stilaro-radius-md);
     padding: clamp(4px, 1vw, 6px);
     transition: all var(--stilaro-transition);
     position: relative;
-    background: white;
+    background: var(--stilaro-bg);
   }
 
   .stilaro-recommendation-item:hover {
-    border-color: var(--stilaro-gray-300);
+    border-color: var(--stilaro-border-strong);
   }
 
   .stilaro-recommendation-item.selected {
@@ -951,14 +993,14 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: var(--stilaro-gray-700);
+    color: var(--stilaro-text);
     font-weight: 500;
   }
 
   .stilaro-recommendation-item .item-reason {
     display: block;
     font-size: clamp(8px, 2vw, 9px);
-    color: var(--stilaro-gray-400);
+    color: var(--stilaro-text-subtle);
     margin-top: 2px;
     line-height: 1.2;
     font-style: italic;
@@ -999,8 +1041,8 @@
     display: flex;
     gap: clamp(8px, 2vw, 12px);
     padding-top: clamp(12px, 3vw, 16px);
-    border-top: 1px solid var(--stilaro-gray-200);
-    background: white;
+    border-top: 1px solid var(--stilaro-border);
+    background: var(--stilaro-bg);
     position: sticky;
     bottom: calc(-1 * clamp(16px, 4vw, 24px));
     margin: 0 calc(-1 * clamp(16px, 4vw, 24px)) calc(-1 * clamp(16px, 4vw, 24px));
@@ -1024,7 +1066,7 @@
   .stilaro-outfit-items-list .outfit-item {
     text-align: center;
     font-size: clamp(10px, 2.5vw, 11px);
-    color: var(--stilaro-gray-500);
+    color: var(--stilaro-text-muted);
   }
 
   .stilaro-outfit-items-list .outfit-item img {
@@ -1032,7 +1074,7 @@
     height: clamp(50px, 13vw, 60px);
     object-fit: cover;
     border-radius: 4px;
-    border: 1px solid var(--stilaro-gray-300);
+    border: 1px solid var(--stilaro-border-strong);
     display: block;
     margin-bottom: 4px;
   }
@@ -1051,7 +1093,7 @@
   .stilaro-sizing-intro p {
     margin: 0;
     font-size: clamp(12px, 3vw, 13px);
-    color: var(--stilaro-gray-500);
+    color: var(--stilaro-text-muted);
     line-height: 1.5;
   }
 
@@ -1064,7 +1106,7 @@
     margin: 0 0 clamp(16px, 4vw, 20px) 0;
     font-size: clamp(16px, 4vw, 18px);
     font-weight: 600;
-    color: var(--stilaro-gray-800);
+    color: var(--stilaro-text);
   }
 
   .stilaro-sizing-field {
@@ -1075,7 +1117,7 @@
     display: block;
     font-size: clamp(12px, 3vw, 13px);
     font-weight: 500;
-    color: var(--stilaro-gray-700);
+    color: var(--stilaro-text);
     margin-bottom: clamp(6px, 1.5vw, 8px);
   }
 
@@ -1088,10 +1130,12 @@
   .stilaro-sizing-input-group input {
     flex: 1;
     padding: clamp(10px, 2.5vw, 12px);
-    border: 1px solid var(--stilaro-gray-300);
+    border: 1px solid var(--stilaro-border-strong);
     border-radius: var(--stilaro-radius-md);
     font-size: 16px; /* Prevents zoom on iOS */
     text-align: center;
+    background: var(--stilaro-bg);
+    color: var(--stilaro-text);
   }
 
   .stilaro-sizing-input-group input:focus {
@@ -1101,17 +1145,18 @@
 
   .stilaro-sizing-unit {
     font-size: clamp(13px, 3.5vw, 14px);
-    color: var(--stilaro-gray-500);
+    color: var(--stilaro-text-muted);
     font-weight: 500;
   }
 
   .stilaro-sizing-field select {
     width: 100%;
     padding: clamp(10px, 2.5vw, 12px);
-    border: 1px solid var(--stilaro-gray-300);
+    border: 1px solid var(--stilaro-border-strong);
     border-radius: var(--stilaro-radius-md);
     font-size: 16px; /* Prevents zoom on iOS */
-    background: white;
+    background: var(--stilaro-bg);
+    color: var(--stilaro-text);
     cursor: pointer;
   }
 
@@ -1132,21 +1177,21 @@
     min-width: clamp(60px, 16vw, 70px);
     max-width: clamp(85px, 22vw, 100px);
     padding: clamp(10px, 2.5vw, 12px) clamp(6px, 1.5vw, 8px);
-    border: 2px solid var(--stilaro-gray-200);
+    border: 2px solid var(--stilaro-border);
     border-radius: var(--stilaro-radius-md);
-    background: white;
+    background: var(--stilaro-bg);
     cursor: pointer;
     transition: all var(--stilaro-transition);
     text-align: center;
   }
 
   .stilaro-sizing-option:hover {
-    border-color: var(--stilaro-gray-300);
+    border-color: var(--stilaro-border-strong);
   }
 
   .stilaro-sizing-option.active {
     border-color: var(--stilaro-primary);
-    background: rgba(0,0,0,0.02);
+    background: var(--stilaro-gray-50);
   }
 
   .stilaro-sizing-option .option-icon {
@@ -1159,7 +1204,7 @@
     display: block;
     font-size: clamp(10px, 2.5vw, 11px);
     font-weight: 500;
-    color: var(--stilaro-gray-700);
+    color: var(--stilaro-text);
   }
 
   .stilaro-sizing-sizes .stilaro-sizing-option {
@@ -1172,8 +1217,8 @@
 
   /* Resultado de tallas */
   .stilaro-sizing-result-card {
-    background: linear-gradient(135deg, var(--stilaro-gray-50) 0%, #fff 100%);
-    border: 1px solid var(--stilaro-gray-200);
+    background: linear-gradient(135deg, var(--stilaro-gray-50) 0%, var(--stilaro-bg) 100%);
+    border: 1px solid var(--stilaro-border);
     border-radius: var(--stilaro-radius-lg);
     padding: clamp(16px, 4vw, 20px);
     margin-bottom: clamp(12px, 3vw, 16px);
@@ -1194,7 +1239,7 @@
     margin: 0;
     font-size: clamp(14px, 3.5vw, 16px);
     font-weight: 600;
-    color: var(--stilaro-gray-700);
+    color: var(--stilaro-text);
   }
 
   .stilaro-sizing-recommended {
@@ -1213,7 +1258,7 @@
   .sizing-alt-size {
     display: block;
     font-size: clamp(12px, 3vw, 13px);
-    color: var(--stilaro-gray-500);
+    color: var(--stilaro-text-muted);
   }
 
   .stilaro-sizing-confidence {
@@ -1223,14 +1268,14 @@
     gap: clamp(8px, 2vw, 10px);
     margin-bottom: clamp(12px, 3vw, 16px);
     padding: clamp(8px, 2vw, 10px);
-    background: #fff;
+    background: var(--stilaro-bg);
     border-radius: var(--stilaro-radius-md);
     flex-wrap: wrap;
   }
 
   .confidence-label {
     font-size: clamp(11px, 2.8vw, 12px);
-    color: var(--stilaro-gray-500);
+    color: var(--stilaro-text-muted);
   }
 
   .confidence-bar {
@@ -1273,9 +1318,9 @@
   .stilaro-sizing-details {
     text-align: left;
     font-size: clamp(11px, 2.8vw, 12px);
-    color: var(--stilaro-gray-500);
+    color: var(--stilaro-text-muted);
     padding: clamp(10px, 2.5vw, 12px);
-    background: #fff;
+    background: var(--stilaro-bg);
     border-radius: var(--stilaro-radius-md);
     margin-bottom: clamp(10px, 2.5vw, 12px);
   }
@@ -1293,7 +1338,7 @@
   }
 
   .stilaro-sizing-details strong {
-    color: var(--stilaro-gray-700);
+    color: var(--stilaro-text);
   }
 
   .stilaro-sizing-tip {
@@ -1632,8 +1677,14 @@
     }
   }
 
-  /* Modo oscuro (si el tema lo soporta) */
+  /* Dark theme detection - adaptive to actual page colors */
   @media (prefers-color-scheme: dark) {
+    .stilaro-vton-modal {
+      /* Override for browsers that support prefers-color-scheme but theme doesn't provide vars */
+      --stilaro-bg: var(--color-background, var(--color-base-background-1, #1a1a1a));
+      --stilaro-text: var(--color-foreground, var(--color-base-text, #e5e5e5));
+    }
+
     .stilaro-fashion-tips {
       background: linear-gradient(135deg, #581c87 0%, #701a75 50%, #86198f 100%);
       border-color: #c026d3;
@@ -1642,6 +1693,21 @@
     .fashion-tip-text {
       color: #fae8ff;
     }
+  }
+
+  /* JS-detected dark theme class (for themes that don't use prefers-color-scheme) */
+  .stilaro-vton-modal.stilaro-dark-theme .stilaro-fashion-tips {
+    background: linear-gradient(135deg, #581c87 0%, #701a75 50%, #86198f 100%);
+    border-color: #c026d3;
+  }
+
+  .stilaro-vton-modal.stilaro-dark-theme .fashion-tip-text {
+    color: #fae8ff;
+  }
+
+  /* Ensure images don't get inverted in dark themes */
+  .stilaro-vton-modal img {
+    color-scheme: light;
   }
 </style>
 

@@ -366,32 +366,35 @@ serve(async (req) => {
 
     if (isOutfitMode && processedGarments.length > 1) {
       // Prompt para outfit completo (múltiples prendas)
-      prompt = `Generate a photorealistic image of the EXACT same person from the first reference photo wearing ALL the clothing items shown in the following ${processedGarments.length} images as a complete outfit.
+      prompt = `Take the first reference photo as the EXACT BASE IMAGE. Your task is to dress the person with the ${processedGarments.length} clothing items shown in the following images.
 
-CRITICAL REQUIREMENTS:
-- Keep the EXACT same person: same face, same body type, same skin tone, same hair
-- The person must be wearing ALL garments shown: combine them into one cohesive outfit
-- Layer the clothes appropriately (e.g., coat/jacket over shirt, pants/skirt on bottom, shoes on feet)
-- Full body visible, natural pose
-- Professional fashion photography style
-- Realistic fabric draping and fit for EACH garment
-- Clean background
-- The outfit should look natural and coordinated
+ABSOLUTE REQUIREMENTS - DO NOT CHANGE:
+- Keep the EXACT same photo: same pose, same angle, same background, same lighting, same shadows
+- Keep the EXACT same person: same face, same expression, same body position, same hands position
+- The output must look like the ORIGINAL PHOTO with different clothes - not a new photo
 
-The person in the output must be identical to the person in the reference - only their clothing changes to show the complete outfit with all garments.`;
+CLOTHING INSERTION:
+- Overlay ALL ${processedGarments.length} garments onto the person in their current pose
+- Layer appropriately: outerwear over tops, bottoms on legs, shoes on feet
+- Adapt each garment's shape to match the person's exact body position and pose
+- Realistic fabric draping that follows the existing pose and body angles
+
+The final image must be indistinguishable from the original photo except for the clothing. Same background, same pose, same everything - only the clothes change.`;
     } else {
       // Prompt original para una sola prenda
-      prompt = `Generate a photorealistic image of the EXACT same person from the reference photo wearing the clothing item shown.
+      prompt = `Take the reference photo as the EXACT BASE IMAGE. Your task is to dress the person with the clothing item shown in the second image.
 
-CRITICAL REQUIREMENTS:
-- Keep the EXACT same person: same face, same body type, same skin tone, same hair
-- The person must be wearing the garment/clothing shown in the second reference
-- Full body visible, natural pose
-- Professional fashion photography style
-- Realistic fabric draping and fit
-- Clean background
+ABSOLUTE REQUIREMENTS - DO NOT CHANGE:
+- Keep the EXACT same photo: same pose, same angle, same background, same lighting, same shadows
+- Keep the EXACT same person: same face, same expression, same body position, same hands position
+- The output must look like the ORIGINAL PHOTO with different clothes - not a new photo
 
-The person in the output must be identical to the person in the reference - only their clothing changes.`;
+CLOTHING INSERTION:
+- Overlay the garment onto the person in their current pose
+- Adapt the garment's shape to match the person's exact body position and pose
+- Realistic fabric draping that follows the existing pose and body angles
+
+The final image must be indistinguishable from the original photo except for the clothing. Same background, same pose, same everything - only the clothes change.`;
     }
 
     // Construir parts con todas las imágenes
