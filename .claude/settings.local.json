@@ -11,7 +11,9 @@
       "mcp__supabase__list_tables",
       "Bash(node -e:*)",
       "Bash(node --check:*)",
-      "Bash(npx shopify app deploy:*)"
+      "Bash(npx shopify app deploy:*)",
+      "Bash(timeout /t 5)",
+      "Bash(findstr:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

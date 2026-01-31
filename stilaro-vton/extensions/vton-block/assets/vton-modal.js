@@ -1787,24 +1787,67 @@
 
   const SIZE_SCALE = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
 
+  function forceBlackText(element) {
+    // Forzar color negro inline para Mac
+    element.style.color = '#000';
+    const children = element.querySelectorAll('*');
+    children.forEach(child => {
+      child.style.color = '#000';
+    });
+  }
+
   function initSizingOptions() {
+    console.log('[VTON SIZING] 🎨 Inicializando opciones de sizing');
+    console.log('[VTON SIZING] 🖥️ User Agent:', navigator.userAgent);
+    console.log('[VTON SIZING] 🍎 Es Mac:', /Mac|iPhone|iPad|iPod/.test(navigator.userAgent));
+
     // Opciones de fit
     const fitOptions = document.querySelectorAll('#stilaro-sizing-fit .stilaro-sizing-option');
+    console.log('[VTON SIZING] 📋 Opciones de fit encontradas:', fitOptions.length);
+
     fitOptions.forEach(opt => {
+      // Forzar negro inline en carga inicial
+      forceBlackText(opt);
+
       opt.addEventListener('click', () => {
-        fitOptions.forEach(o => o.classList.remove('active'));
+        fitOptions.forEach(o => {
+          o.classList.remove('active');
+          forceBlackText(o);
+        });
         opt.classList.add('active');
+        forceBlackText(opt);
         sizingData.fit_preference = opt.dataset.value;
+
+        // Log de diagnóstico
+        const computedColor = window.getComputedStyle(opt).color;
+        console.log('[VTON SIZING] 🎯 Opción seleccionada:', opt.dataset.value);
+        console.log('[VTON SIZING] 🎨 Color computado:', computedColor);
+        console.log('[VTON SIZING] 📝 Color inline:', opt.style.color);
       });
     });
 
     // Opciones de talla de referencia
     const sizeOptions = document.querySelectorAll('#stilaro-sizing-reference .stilaro-sizing-option');
+    console.log('[VTON SIZING] 📏 Opciones de talla encontradas:', sizeOptions.length);
+
     sizeOptions.forEach(opt => {
+      // Forzar negro inline en carga inicial
+      forceBlackText(opt);
+
       opt.addEventListener('click', () => {
-        sizeOptions.forEach(o => o.classList.remove('active'));
+        sizeOptions.forEach(o => {
+          o.classList.remove('active');
+          forceBlackText(o);
+        });
         opt.classList.add('active');
+        forceBlackText(opt);
         sizingData.reference_size = opt.dataset.value;
+
+        // Log de diagnóstico
+        const computedColor = window.getComputedStyle(opt).color;
+        console.log('[VTON SIZING] 🎯 Talla seleccionada:', opt.dataset.value);
+        console.log('[VTON SIZING] 🎨 Color computado:', computedColor);
+        console.log('[VTON SIZING] 📝 Color inline:', opt.style.color);
       });
     });
 
@@ -2221,12 +2264,14 @@
     const fitOptions = document.querySelectorAll('#stilaro-sizing-fit .stilaro-sizing-option');
     fitOptions.forEach(opt => {
       opt.classList.toggle('active', opt.dataset.value === 'regular');
+      forceBlackText(opt); // Forzar color negro
     });
 
     // Reset size options
     const sizeOptions = document.querySelectorAll('#stilaro-sizing-reference .stilaro-sizing-option');
     sizeOptions.forEach(opt => {
       opt.classList.toggle('active', opt.dataset.value === 'M');
+      forceBlackText(opt); // Forzar color negro
     });
   }
 
